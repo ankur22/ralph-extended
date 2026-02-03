@@ -95,12 +95,18 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr) || true
   fi
   
-  # Check for completion signal
+  # Check for completion signal, gated by PRD status
   if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
-    echo ""
-    echo "Ralph completed all tasks!"
-    echo "Completed at iteration $i of $MAX_ITERATIONS"
-    exit 0
+    REMAINING_STORIES=0
+    if [ -f "$PRD_FILE" ]; then
+      REMAINING_STORIES=$(jq '[.userStories[] | select(.passes == false)] | length' "$PRD_FILE" 2>/dev/null || echo 0)
+    fi
+    if [ "$REMAINING_STORIES" -eq 0 ]; then
+      echo ""
+      echo "Ralph completed all tasks!"
+      echo "Completed at iteration $i of $MAX_ITERATIONS"
+      exit 0
+    fi
   fi
   
   echo "Iteration $i complete. Continuing..."

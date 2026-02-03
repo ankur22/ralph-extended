@@ -89,12 +89,10 @@ If no browser tools are available, note in your progress report that manual brow
 
 ## Stop Condition
 
-After completing a user story, check if ALL stories have `passes: true`.
-
-If ALL stories are complete and passing, reply with:
+After completing a user story, check (grep the prd.json file) if ALL stories have `passes: false` in prd.json. If nothing returned then that means that ALL stories are complete. If ALL stories are complete and passing (DO NOT IGNORE this is important, only do this when ALL stories have `passes: true` and none left with `"passes": false` in prd.json), reply with:
 <promise>COMPLETE</promise>
 
-If there are still stories with `passes: false`, end your response normally (another iteration will pick up the next story).
+Otherwise, if there are still stories with `passes: false` in prd.json, end your response normally (another iteration will pick up the next story).
 
 ## Important
 

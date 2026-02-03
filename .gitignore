@@ -3,6 +3,9 @@ prd.json
 progress.txt
 .last-branch
 
+# Test project directory (working area for testing the system)
+test-project/
+
 # Archive is optional to commit
 # archive/
 

@@ -1,0 +1,115 @@
+{
+  "testSuites": {
+    "US-001": {
+      "functional": {
+        "enabled": true,
+        "scriptPath": "tests/k6/us-001-functional.js",
+        "endpoints": [
+          {
+            "method": "GET",
+            "path": "/health",
+            "expectedStatus": 200,
+            "expectedSchema": {
+              "status": "string",
+              "database": "string",
+              "timestamp": "string"
+            }
+          }
+        ],
+        "thresholds": {
+          "http_req_duration": ["p(95)<500"],
+          "http_req_failed": ["rate<0.01"]
+        }
+      },
+      "e2e": {
+        "enabled": true,
+        "scriptPath": "tests/k6/us-001-e2e.js",
+        "scenarios": [
+          {
+            "name": "View health status dashboard",
+            "steps": [
+              "Navigate to homepage",
+              "Verify health status card is visible",
+              "Verify status shows 'healthy' or 'unhealthy'",
+              "Verify database status is displayed"
+            ]
+          }
+        ],
+        "accessibility": true
+      }
+    },
+    "US-002": {
+      "functional": {
+        "enabled": true,
+        "scriptPath": "tests/k6/us-002-functional.js",
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/api/auth/login",
+            "expectedStatus": 200,
+            "requestBody": {
+              "username": "testuser",
+              "password": "testpass"
+            },
+            "expectedSchema": {
+              "token": "string",
+              "refreshToken": "string",
+              "expiresIn": "number"
+            }
+          },
+          {
+            "method": "POST",
+            "path": "/api/auth/refresh",
+            "expectedStatus": 200,
+            "requestBody": {
+              "refreshToken": "string"
+            },
+            "expectedSchema": {
+              "token": "string",
+              "expiresIn": "number"
+            }
+          }
+        ],
+        "thresholds": {
+          "http_req_duration": ["p(95)<500"],
+          "http_req_failed": ["rate<0.01"]
+        }
+      },
+      "e2e": {
+        "enabled": true,
+        "scriptPath": "tests/k6/us-002-e2e.js",
+        "scenarios": [
+          {
+            "name": "User login flow",
+            "steps": [
+              "Navigate to login page",
+              "Enter valid username and password",
+              "Click submit button",
+              "Verify loading state is shown",
+              "Verify redirect to dashboard on success",
+              "Verify token is stored"
+            ]
+          },
+          {
+            "name": "User login error handling",
+            "steps": [
+              "Navigate to login page",
+              "Enter invalid credentials",
+              "Click submit button",
+              "Verify error message is displayed",
+              "Verify no redirect occurs"
+            ]
+          }
+        ],
+        "accessibility": true
+      }
+    }
+  },
+  "config": {
+    "baseUrl": "http://localhost:8080",
+    "timeout": 30000,
+    "retries": 2,
+    "parallelExecution": false,
+    "maxQACycles": 5
+  }
+}

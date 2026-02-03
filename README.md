@@ -85,6 +85,72 @@ Add to `~/.config/amp/settings.json`:
 
 This enables automatic handoff when context fills up, allowing Ralph to handle large stories that exceed a single context window.
 
+## Ralph Extended - Multi-Agent System
+
+Ralph Extended is an advanced version that uses **5 specialized agents** (Backend Dev, Backend Reviewer, Frontend Dev, Frontend Reviewer, QA) working sequentially. Each agent is a fresh Claude Code instance with a specific role.
+
+See [AGENTS.md](./AGENTS.md) for complete documentation and [docs/AI-Extended-Ralph-Agent-Flow.md](./docs/AI-Extended-Ralph-Agent-Flow.md) for design rationale.
+
+### Setup for Ralph Extended
+
+Copy the ralph-extended files into your project:
+
+```bash
+# From your project root
+mkdir -p scripts/ralph
+cp /path/to/ralph-extended/ralph-extended.sh scripts/ralph/
+cp -r /path/to/ralph-extended/agents scripts/ralph/
+
+chmod +x scripts/ralph/ralph-extended.sh
+```
+
+**Note:** Do NOT copy `prompt.md` or `CLAUDE.md` - Ralph Extended agents use their own instructions from the `agents/` directory.
+
+### Running Ralph Extended
+
+```bash
+# Using Claude Code (recommended for Ralph Extended)
+./scripts/ralph/ralph-extended.sh --tool claude [max_iterations]
+
+# Using Amp
+./scripts/ralph/ralph-extended.sh --tool amp [max_iterations]
+```
+
+Default is 20 iterations. Ralph Extended will:
+1. Create `feature_progress.json` from your `prd.json` (automatically on first run)
+2. Route each feature through the agent pipeline:
+   - Backend Dev → Backend Review → Frontend Dev → Frontend Review → QA
+3. Route issues back to the appropriate dev agent based on failure type
+4. Track state and history in `feature_progress.json`
+5. Update `progress.txt` with learnings from each agent
+
+### Key Differences: Ralph vs Ralph Extended
+
+| Aspect | Ralph | Ralph Extended |
+|--------|-------|----------------|
+| **Agent Model** | Single general-purpose agent | 5 specialized agents (Backend Dev, Backend Review, Frontend Dev, Frontend Review, QA) |
+| **Workflow** | Single agent does all work | Sequential pipeline with blocking reviews |
+| **Review Process** | Tests only | Dedicated code review agents before QA |
+| **QA Process** | Tests only | Dedicated QA agent with k6 (functional + e2e tests) |
+| **Issue Routing** | Agent fixes own issues | Targeted routing to backend/frontend dev based on failure type |
+| **State Tracking** | `prd.json` only | `prd.json` + `feature_progress.json` (detailed history) |
+| **Test Framework** | Any | k6 for API tests and browser automation |
+
+### Ralph Extended Files
+
+| File | Purpose |
+|------|---------|
+| `ralph-extended.sh` | Bash orchestrator that spawns specialized agents |
+| `agents/BACKEND_DEV.md` | Backend developer agent instructions |
+| `agents/BACKEND_REVIEWER.md` | Backend code reviewer agent instructions |
+| `agents/FRONTEND_DEV.md` | Frontend developer agent instructions |
+| `agents/FRONTEND_REVIEWER.md` | Frontend code reviewer agent instructions |
+| `agents/QA.md` | QA engineer agent instructions (k6 testing) |
+| `feature_progress.json` | Detailed state tracking for each feature |
+| `tests.json` | k6 test suite configuration |
+| `examples/` | Example files for reference |
+| `docs/` | Complete documentation and design docs |
+
 ## Workflow
 
 ### 1. Create a PRD

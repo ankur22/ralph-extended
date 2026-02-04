@@ -305,16 +305,16 @@ spawn_agent() {
     echo "Using Docker sandbox: $SANDBOX_NAME"
 
     # Execute agent inside sandbox using docker exec with stdin
-    # Pass ANTHROPIC_API_KEY to sandbox
+    # Pass ANTHROPIC_API_KEY to sandbox and cd to workspace directory
     if [[ "$TOOL" == "amp" ]]; then
       if [ -f "$PROJECT_CLAUDE" ]; then
         OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | \
           docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
-            "amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
+            "cd '$SCRIPT_DIR' && amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
       else
         OUTPUT=$(cat "$prompt_file" | \
           docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
-            "amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
+            "cd '$SCRIPT_DIR' && amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
       fi
     else
       # Claude Code: use --dangerously-skip-permissions for autonomous operation
@@ -322,11 +322,11 @@ spawn_agent() {
         echo "Using project CLAUDE.md for context"
         OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | \
           docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
-            "claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
+            "cd '$SCRIPT_DIR' && claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
       else
         OUTPUT=$(cat "$prompt_file" | \
           docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
-            "claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
+            "cd '$SCRIPT_DIR' && claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
       fi
     fi
   else

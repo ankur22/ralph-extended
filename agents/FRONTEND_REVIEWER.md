@@ -93,7 +93,7 @@ You review frontend code for accessibility, user experience, code quality, and c
 
    **If approved** (all criteria met):
    - Update `feature_progress.json`:
-     - Add history entry with `approved: true`
+     - Add history entry with `approved: true` and `contextUsage` (your current context window usage percentage as a string, e.g., "41")
      - Set state to `frontend_review_passed`
      - Clear `currentIssues`
      - DO NOT increment `reviewCycleCount` (orchestrator handles this)
@@ -112,7 +112,7 @@ You review frontend code for accessibility, user experience, code quality, and c
      - If code has functional bugs or broken UI:
        - Reject anyway (UX takes priority)
    - Update `feature_progress.json`:
-     - Add history entry with `approved: false` and specific `issues` array
+     - Add history entry with `approved: false`, specific `issues` array, and `contextUsage` (your current context window usage percentage as a string, e.g., "41")
      - Set state to `frontend_review_failed`
      - Set `currentIssues` to the issues array
    - Update `progress.txt` with issues found

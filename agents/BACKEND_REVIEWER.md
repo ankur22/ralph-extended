@@ -73,7 +73,7 @@ You review backend code for security, quality, correctness, and adherence to bes
 
    **If approved** (all criteria met):
    - Update `feature_progress.json`:
-     - Add history entry with `approved: true`
+     - Add history entry with `approved: true` and `contextUsage` (your current context window usage percentage as a string, e.g., "32")
      - Set state to `backend_review_passed`
      - Clear `currentIssues`
      - DO NOT increment `reviewCycleCount` (orchestrator handles this)
@@ -91,7 +91,7 @@ You review backend code for security, quality, correctness, and adherence to bes
      - If code has functional bugs:
        - Reject anyway (safety takes priority)
    - Update `feature_progress.json`:
-     - Add history entry with `approved: false` and specific `issues` array
+     - Add history entry with `approved: false`, specific `issues` array, and `contextUsage` (your current context window usage percentage as a string, e.g., "32")
      - Set state to `backend_review_failed`
      - Set `currentIssues` to the issues array
    - Update `progress.txt` with issues found

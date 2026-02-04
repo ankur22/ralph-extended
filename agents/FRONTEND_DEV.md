@@ -54,7 +54,7 @@ You implement frontend features with high quality code, tests, and proper user e
    - Add a new entry to the `history` array for the current feature
    - Set current `state` to `frontend_review` (ready for review)
    - Clear `currentIssues` array (if this was a fix iteration)
-   - Include: state, agent, timestamp, summary, hasWork: true, filesChanged array
+   - Include: state, agent, timestamp, summary, hasWork: true, filesChanged array, contextUsage (your current context window usage percentage as a string, e.g., "58")
 
    **Update `progress.txt`** (APPEND, never replace):
    ```

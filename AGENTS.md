@@ -215,6 +215,27 @@ Agents output specific markers for the orchestrator to detect completion:
 - `FRONTEND_REVIEW_PASSED` / `FRONTEND_REVIEW_FAILED`
 - `QA_TESTING_COMPLETE` / `QA_NO_TESTING` / `QA_ISSUES_BACKEND` / `QA_ISSUES_FRONTEND`
 
+### Context Usage Tracking
+
+Each agent records their context window usage in the `feature_progress.json` history entry when updating tracking files. The `contextUsage` field stores the percentage as a string (e.g., "45").
+
+Example history entry:
+```json
+{
+  "state": "backend_dev",
+  "agent": "backend-dev",
+  "timestamp": "2026-02-03T10:00:00Z",
+  "summary": "Implemented /health endpoint",
+  "contextUsage": "45",
+  ...
+}
+```
+
+This helps monitor:
+- Which agents/tasks consume the most context
+- When context limits might become a concern
+- Historical patterns for optimization
+
 ### Auto-Transitions
 The orchestrator automatically transitions between phases:
 - `backend_review_passed` → `frontend_dev`

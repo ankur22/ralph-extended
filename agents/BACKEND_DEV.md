@@ -50,7 +50,7 @@ You implement backend features with high quality code, tests, and proper error h
    - Add a new entry to the `history` array for the current feature
    - Set current `state` to `backend_review` (ready for review)
    - Clear `currentIssues` array (if this was a fix iteration)
-   - Include: state, agent, timestamp, summary, hasWork: true, filesChanged array
+   - Include: state, agent, timestamp, summary, hasWork: true, filesChanged array, contextUsage (your current context window usage percentage as a string, e.g., "45")
 
    **Update `progress.txt`** (APPEND, never replace):
    ```

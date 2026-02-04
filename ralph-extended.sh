@@ -1,6 +1,6 @@
 #!/bin/bash
 # Ralph Extended - Multi-agent autonomous coding system
-# Usage: ./ralph-extended.sh [--tool amp|claude] [--no-sandbox] [max_iterations]
+# Usage: ./ralph-extended.sh [--tool amp|claude] [--model MODEL] [--no-sandbox] [max_iterations]
 
 set -e
 
@@ -8,6 +8,7 @@ set -e
 TOOL="claude"  # Default to claude for extended version
 MAX_ITERATIONS=20
 USE_DOCKER_SANDBOX=true  # Enable Docker Sandbox by default
+CLAUDE_MODEL=""  # Empty means use Claude Code's default
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
@@ -20,6 +21,14 @@ while [[ $# -gt 0 ]]; do
       TOOL="${1#*=}"
       shift
       ;;
+    --model)
+      CLAUDE_MODEL="$2"
+      shift 2
+      ;;
+    --model=*)
+      CLAUDE_MODEL="${1#*=}"
+      shift
+      ;;
     --no-sandbox)
       USE_DOCKER_SANDBOX=false
       shift
@@ -29,8 +38,9 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help)
-      echo "Usage: ./ralph-extended.sh [--tool amp|claude] [--no-sandbox] [max_iterations]"
+      echo "Usage: ./ralph-extended.sh [--tool amp|claude] [--model MODEL] [--no-sandbox] [max_iterations]"
       echo "  --tool:       AI tool to use (amp or claude, default: claude)"
+      echo "  --model:      Claude model to use (e.g., claude-sonnet-4-20250514, claude-opus-4-20250514)"
       echo "  --no-sandbox: Disable Docker sandbox isolation (runs on host)"
       echo "  --sandbox:    Enable Docker sandbox isolation (default)"
       echo "  max_iterations: Maximum number of iterations (default: 20)"
@@ -318,15 +328,20 @@ spawn_agent() {
       fi
     else
       # Claude Code: use --dangerously-skip-permissions for autonomous operation
+      # Build model flag if specified
+      MODEL_FLAG=""
+      if [[ -n "$CLAUDE_MODEL" ]]; then
+        MODEL_FLAG="--model $CLAUDE_MODEL"
+      fi
       if [ -f "$PROJECT_CLAUDE" ]; then
         echo "Using project CLAUDE.md for context"
         OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | \
           docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
-            "cd '$SCRIPT_DIR' && claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
+            "cd '$SCRIPT_DIR' && claude --dangerously-skip-permissions --print $MODEL_FLAG" 2>&1 | tee /dev/stderr) || true
       else
         OUTPUT=$(cat "$prompt_file" | \
           docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
-            "cd '$SCRIPT_DIR' && claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
+            "cd '$SCRIPT_DIR' && claude --dangerously-skip-permissions --print $MODEL_FLAG" 2>&1 | tee /dev/stderr) || true
       fi
     fi
   else
@@ -339,11 +354,16 @@ spawn_agent() {
       fi
     else
       # Claude Code: use --dangerously-skip-permissions for autonomous operation, --print for output
+      # Build model flag if specified
+      MODEL_FLAG=""
+      if [[ -n "$CLAUDE_MODEL" ]]; then
+        MODEL_FLAG="--model $CLAUDE_MODEL"
+      fi
       if [ -f "$PROJECT_CLAUDE" ]; then
         echo "Using project CLAUDE.md for context"
-        OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
+        OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | claude --dangerously-skip-permissions --print $MODEL_FLAG 2>&1 | tee /dev/stderr) || true
       else
-        OUTPUT=$(cat "$prompt_file" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
+        OUTPUT=$(cat "$prompt_file" | claude --dangerously-skip-permissions --print $MODEL_FLAG 2>&1 | tee /dev/stderr) || true
       fi
     fi
   fi
@@ -406,6 +426,9 @@ determine_next_state() {
 echo "========================================================================="
 echo "  Ralph Extended - Multi-Agent System"
 echo "  Tool: $TOOL"
+if [[ -n "$CLAUDE_MODEL" ]]; then
+echo "  Model: $CLAUDE_MODEL"
+fi
 echo "  Docker Sandbox: $(if [[ "$USE_DOCKER_SANDBOX" == "true" ]]; then echo "Enabled"; else echo "Disabled"; fi)"
 echo "  Max iterations: $MAX_ITERATIONS"
 echo "========================================================================="

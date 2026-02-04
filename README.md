@@ -142,12 +142,21 @@ chmod +x scripts/ralph/ralph-extended.sh
 # Using Claude Code with Docker Sandbox (recommended)
 ./scripts/ralph/ralph-extended.sh --tool claude [max_iterations]
 
+# Specify a Claude model (e.g., Opus 4.5 for complex tasks)
+./scripts/ralph/ralph-extended.sh --tool claude --model claude-opus-4-20250514 [max_iterations]
+
 # Disable sandbox isolation (legacy mode)
 ./scripts/ralph/ralph-extended.sh --tool claude --no-sandbox [max_iterations]
 
 # Using Amp with Docker Sandbox
 ./scripts/ralph/ralph-extended.sh --tool amp [max_iterations]
 ```
+
+**Available options:**
+- `--tool`: AI tool to use (`claude` or `amp`, default: `claude`)
+- `--model`: Claude model to use (e.g., `claude-sonnet-4-20250514`, `claude-opus-4-20250514`)
+- `--no-sandbox`: Disable Docker sandbox isolation (runs agents on host)
+- `--sandbox`: Enable Docker sandbox isolation (default)
 
 Default is 20 iterations. Ralph Extended will:
 1. Create `feature_progress.json` from your `prd.json` (automatically on first run)

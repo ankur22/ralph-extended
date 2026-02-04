@@ -178,6 +178,23 @@ Ralph Extended uses Docker AI Sandboxes to isolate agent execution:
 **Disabling sandbox mode:**
 Use `--no-sandbox` flag to run agents directly on the host system (legacy mode).
 
+### Model Selection
+
+Use the `--model` flag to specify which Claude model all agents use:
+
+```bash
+# Use Opus 4.5 for complex reasoning tasks
+./ralph-extended.sh --model claude-opus-4-20250514
+
+# Use Sonnet 4 (faster, cost-effective)
+./ralph-extended.sh --model claude-sonnet-4-20250514
+```
+
+**Model recommendations:**
+- **Opus 4.5**: Best for complex architectural decisions, nuanced code review, and difficult debugging
+- **Sonnet 4**: Good balance of speed and capability for most development tasks
+- **Default**: If not specified, uses Claude Code's default model
+
 ### Fresh Instances
 - Each agent spawns as a fresh Claude Code instance
 - No context carries over between agents
@@ -589,6 +606,16 @@ docker sandbox exec <sandbox-name> bash -c "
   git config --global user.email 'ralph@extended.local'
   git config --global --add safe.directory '*'
 "
+```
+
+**API key errors ("Invalid API key"):**
+Docker sandboxes cannot access the host's keychain. Export the API key before running:
+```bash
+# macOS - retrieve from keychain
+export ANTHROPIC_API_KEY=$(security find-generic-password -s "Claude Code" -a "$USER" -w)
+
+# Or set manually
+export ANTHROPIC_API_KEY='your-api-key-here'
 ```
 
 ## Resources

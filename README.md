@@ -93,6 +93,36 @@ See [AGENTS.md](./AGENTS.md) for complete documentation and [docs/AI-Extended-Ra
 
 ### Setup for Ralph Extended
 
+#### Prerequisites
+
+Before running Ralph Extended:
+
+1. **Docker Desktop 4.50+** with Docker AI Sandboxes feature enabled
+   - Install from [docker.com](https://www.docker.com/products/docker-desktop/)
+   - Verify: `docker sandbox --help` should show sandbox commands
+
+2. **Claude Code CLI** installed globally
+   - `npm install -g @anthropic-ai/claude-code`
+
+3. **Anthropic API Key** exported as environment variable
+   - Docker sandboxes cannot access the host's keychain
+   - **Recommended**: Export directly from macOS keychain:
+     ```bash
+     export ANTHROPIC_API_KEY=$(security find-generic-password -s "Claude Code" -a "$USER" -w)
+     ```
+   - **Alternative**: Get your key from [console.anthropic.com](https://console.anthropic.com/) and export manually:
+     ```bash
+     export ANTHROPIC_API_KEY='your-api-key-here'
+     ```
+
+4. **jq** for JSON processing
+   - macOS: `brew install jq`
+   - Linux: `apt-get install jq`
+
+5. **Git** repository initialized in your project
+
+#### Installation
+
 Copy the ralph-extended files into your project:
 
 ```bash
@@ -109,20 +139,41 @@ chmod +x scripts/ralph/ralph-extended.sh
 ### Running Ralph Extended
 
 ```bash
-# Using Claude Code (recommended for Ralph Extended)
+# Using Claude Code with Docker Sandbox (recommended)
 ./scripts/ralph/ralph-extended.sh --tool claude [max_iterations]
 
-# Using Amp
+# Specify a Claude model (e.g., Opus 4.5 for complex tasks)
+./scripts/ralph/ralph-extended.sh --tool claude --model claude-opus-4-20250514 [max_iterations]
+
+# Disable sandbox isolation (legacy mode)
+./scripts/ralph/ralph-extended.sh --tool claude --no-sandbox [max_iterations]
+
+# Using Amp with Docker Sandbox
 ./scripts/ralph/ralph-extended.sh --tool amp [max_iterations]
 ```
 
+**Available options:**
+- `--tool`: AI tool to use (`claude` or `amp`, default: `claude`)
+- `--model`: Claude model to use (e.g., `claude-sonnet-4-20250514`, `claude-opus-4-20250514`)
+- `--no-sandbox`: Disable Docker sandbox isolation (runs agents on host)
+- `--sandbox`: Enable Docker sandbox isolation (default)
+
 Default is 20 iterations. Ralph Extended will:
 1. Create `feature_progress.json` from your `prd.json` (automatically on first run)
-2. Route each feature through the agent pipeline:
+2. Create a Docker sandbox for each feature (isolated execution environment)
+3. Route each feature through the agent pipeline:
    - Backend Dev → Backend Review → Frontend Dev → Frontend Review → QA
-3. Route issues back to the appropriate dev agent based on failure type
-4. Track state and history in `feature_progress.json`
-5. Update `progress.txt` with learnings from each agent
+4. Route issues back to the appropriate dev agent based on failure type
+5. Track state and history in `feature_progress.json`
+6. Update `progress.txt` with learnings from each agent
+7. Clean up sandbox when feature completes
+
+**Docker Sandbox Mode (Default):**
+- Agents run inside isolated Docker containers
+- Each feature gets its own sandbox
+- Sandbox persists across agents within the same feature
+- Automatic cleanup when feature completes
+- Use `--no-sandbox` to disable and run agents on host system
 
 ### Key Differences: Ralph vs Ralph Extended
 

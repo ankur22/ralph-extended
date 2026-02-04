@@ -1,6 +1,6 @@
 #!/bin/bash
 # Ralph Extended - Multi-agent autonomous coding system
-# Usage: ./ralph-extended.sh [--tool amp|claude] [--model MODEL] [--no-sandbox] [max_iterations]
+# Usage: ./ralph-extended.sh [--tool amp|claude|codex] [--model MODEL] [--no-sandbox] [max_iterations]
 
 set -e
 
@@ -38,8 +38,8 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --help)
-      echo "Usage: ./ralph-extended.sh [--tool amp|claude] [--model MODEL] [--no-sandbox] [max_iterations]"
-      echo "  --tool:       AI tool to use (amp or claude, default: claude)"
+      echo "Usage: ./ralph-extended.sh [--tool amp|claude|codex] [--model MODEL] [--no-sandbox] [max_iterations]"
+      echo "  --tool:       AI tool to use (amp, claude, or codex, default: claude)"
       echo "  --model:      Claude model to use (e.g., claude-sonnet-4-20250514, claude-opus-4-20250514)"
       echo "  --no-sandbox: Disable Docker sandbox isolation (runs on host)"
       echo "  --sandbox:    Enable Docker sandbox isolation (default)"
@@ -57,9 +57,20 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate tool choice
-if [[ "$TOOL" != "amp" && "$TOOL" != "claude" ]]; then
-  echo "Error: Invalid tool '$TOOL'. Must be 'amp' or 'claude'."
+if [[ "$TOOL" != "amp" && "$TOOL" != "claude" && "$TOOL" != "codex" ]]; then
+  echo "Error: Invalid tool '$TOOL'. Must be 'amp', 'claude', or 'codex'."
   exit 1
+fi
+
+# Show auth status based on tool
+if [[ "$TOOL" == "codex" ]]; then
+  if [ -f "$HOME/.codex/auth.json" ]; then
+    echo "Codex auth: ~/.codex/auth.json (found)"
+  else
+    echo "Codex auth: ~/.codex/auth.json (NOT FOUND - run 'codex login' first)"
+  fi
+elif [[ "$TOOL" == "claude" ]] && [[ -n "$ANTHROPIC_API_KEY" ]]; then
+  echo "ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:0:10}...${ANTHROPIC_API_KEY: -4} (loaded)"
 fi
 
 # Trap to clean up sandboxes on script exit
@@ -182,18 +193,33 @@ create_sandbox() {
     exit 1
   fi
 
+  # Determine sandbox template based on tool (claude or codex)
+  local sandbox_template="claude"
+  if [[ "$TOOL" == "codex" ]]; then
+    sandbox_template="codex"
+  fi
+
   # Create sandbox with project directory mounted
-  docker sandbox create --name "$sandbox_name" claude "$SCRIPT_DIR" >&2 || {
+  docker sandbox create --name "$sandbox_name" "$sandbox_template" "$SCRIPT_DIR" >&2 || {
     echo "ERROR: Failed to create Docker sandbox" >&2
     echo "Ensure Docker Desktop 4.50+ is installed and running" >&2
     exit 1
   }
 
-  # Install required dependencies in sandbox
+  # Install required dependencies in sandbox based on tool
   echo "Installing dependencies in sandbox..." >&2
+
+  # Determine which AI tool to install
+  local install_cmd=""
+  if [[ "$TOOL" == "codex" ]]; then
+    install_cmd="command -v codex >/dev/null 2>&1 || npm install -g @openai/codex"
+  else
+    install_cmd="command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code"
+  fi
+
   docker sandbox exec "$sandbox_name" bash -c "
-    # Install Claude Code if not present
-    command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code
+    # Install AI tool
+    $install_cmd
 
     # Install jq for JSON parsing
     command -v jq >/dev/null 2>&1 || (apt-get update && apt-get install -y jq)
@@ -207,9 +233,19 @@ create_sandbox() {
     git config --global --add safe.directory '*'
   " >&2 || {
     echo "ERROR: Failed to install dependencies in sandbox" >&2
-    echo "Required tools: claude, jq, git" >&2
+    echo "Required tools: $TOOL, jq, git" >&2
     exit 1
   }
+
+  # For Codex, copy auth.json from host into sandbox
+  if [[ "$TOOL" == "codex" ]] && [ -f "$HOME/.codex/auth.json" ]; then
+    echo "Copying Codex auth credentials into sandbox..." >&2
+    # Pipe auth.json content into sandbox via stdin
+    cat "$HOME/.codex/auth.json" | docker sandbox exec -i "$sandbox_name" bash -c "mkdir -p ~/.codex && cat > ~/.codex/auth.json" >&2 || {
+      echo "WARNING: Failed to copy Codex auth.json into sandbox" >&2
+      echo "You may need to run 'codex login' inside the sandbox" >&2
+    }
+  fi
 
   echo "Sandbox $sandbox_name ready" >&2
   echo "$sandbox_name"  # Return sandbox name to stdout
@@ -275,23 +311,36 @@ spawn_agent() {
   echo "Spawning: $agent_name"
   echo "State: $state"
 
-  # Check if project has CLAUDE.md for project-specific context
+  # Check if project has context file for project-specific context
+  # Use CODEX.md for codex tool, CLAUDE.md for claude tool
   PROJECT_CLAUDE="CLAUDE.md"
+  PROJECT_CODEX="CODEX.md"
 
   if [[ "$USE_DOCKER_SANDBOX" == "true" ]]; then
     # Docker sandbox execution path
     CURRENT_FEATURE=$(get_current_feature)
     SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE")
 
-    # Check if API key is available for sandbox
-    if [ -z "$ANTHROPIC_API_KEY" ]; then
-      echo "ERROR: ANTHROPIC_API_KEY environment variable not set."
-      echo "Docker sandboxes cannot access the host's keychain."
-      echo "Please export your API key before running:"
-      echo "  export ANTHROPIC_API_KEY='your-api-key-here'"
-      echo ""
-      echo "Or disable sandbox mode with --no-sandbox flag"
-      exit 1
+    # Check if auth is available for sandbox based on tool
+    if [[ "$TOOL" == "codex" ]]; then
+      # Codex uses browser-based auth cached in ~/.codex/auth.json
+      if [ ! -f "$HOME/.codex/auth.json" ]; then
+        echo "ERROR: Codex auth not found at ~/.codex/auth.json"
+        echo "Please run 'codex login' on your host machine first to authenticate."
+        echo ""
+        echo "Or disable sandbox mode with --no-sandbox flag"
+        exit 1
+      fi
+    elif [[ "$TOOL" == "claude" ]]; then
+      if [ -z "$ANTHROPIC_API_KEY" ]; then
+        echo "ERROR: ANTHROPIC_API_KEY environment variable not set."
+        echo "Docker sandboxes cannot access the host's keychain."
+        echo "Please export your API key before running:"
+        echo "  export ANTHROPIC_API_KEY='your-api-key-here'"
+        echo ""
+        echo "Or disable sandbox mode with --no-sandbox flag"
+        exit 1
+      fi
     fi
 
     # Create sandbox if it doesn't exist, or reuse existing
@@ -326,6 +375,19 @@ spawn_agent() {
           docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
             "cd '$SCRIPT_DIR' && amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
       fi
+    elif [[ "$TOOL" == "codex" ]]; then
+      # Codex: use --dangerously-bypass-approvals-and-sandbox for autonomous operation
+      # Auth is handled via ~/.codex/auth.json copied into sandbox
+      if [ -f "$PROJECT_CODEX" ]; then
+        echo "Using project CODEX.md for context"
+        OUTPUT=$(cat "$PROJECT_CODEX" "$prompt_file" | \
+          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+            "cd '$SCRIPT_DIR' && codex exec --dangerously-bypass-approvals-and-sandbox" 2>&1 | tee /dev/stderr) || true
+      else
+        OUTPUT=$(cat "$prompt_file" | \
+          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+            "cd '$SCRIPT_DIR' && codex exec --dangerously-bypass-approvals-and-sandbox" 2>&1 | tee /dev/stderr) || true
+      fi
     else
       # Claude Code: use --dangerously-skip-permissions for autonomous operation
       # Build model flag if specified
@@ -351,6 +413,14 @@ spawn_agent() {
         OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
       else
         OUTPUT=$(cat "$prompt_file" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+      fi
+    elif [[ "$TOOL" == "codex" ]]; then
+      # Codex: use --dangerously-bypass-approvals-and-sandbox for autonomous operation
+      if [ -f "$PROJECT_CODEX" ]; then
+        echo "Using project CODEX.md for context"
+        OUTPUT=$(cat "$PROJECT_CODEX" "$prompt_file" | codex exec --dangerously-bypass-approvals-and-sandbox 2>&1 | tee /dev/stderr) || true
+      else
+        OUTPUT=$(cat "$prompt_file" | codex exec --dangerously-bypass-approvals-and-sandbox 2>&1 | tee /dev/stderr) || true
       fi
     else
       # Claude Code: use --dangerously-skip-permissions for autonomous operation, --print for output

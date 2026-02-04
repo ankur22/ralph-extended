@@ -61,6 +61,9 @@ The system uses **5 specialized agents** that work sequentially:
 # Run Ralph Extended with Claude Code (recommended)
 ./ralph-extended.sh --tool claude [max_iterations]
 
+# Run Ralph Extended with OpenAI Codex
+./ralph-extended.sh --tool codex [max_iterations]
+
 # Run Ralph Extended with Amp
 ./ralph-extended.sh --tool amp [max_iterations]
 
@@ -168,7 +171,8 @@ Ralph Extended uses Docker AI Sandboxes to isolate agent execution:
 - **Isolation between features**: Each feature gets a fresh sandbox
 - **File synchronization**: Project directory mounted as volume - agents can read/write files
 - **Git operations**: Full git access within sandbox boundary
-- **Dependencies**: Claude Code, jq, git installed automatically on sandbox creation
+- **Dependencies**: AI tool (Claude Code or Codex), jq, git installed automatically on sandbox creation
+- **Sandbox template**: Uses `claude` template for Claude Code, `codex` template for OpenAI Codex
 
 **Requirements:**
 - Docker Desktop 4.50+ installed and running
@@ -341,15 +345,19 @@ QA routes issues by layer:
 - Notes flakiness in progress.txt
 - Recommends test improvements
 
-## CLAUDE.md Project Instructions
+## Project Context Files
 
-The root `CLAUDE.md` file is included in every agent's context, providing:
+The root project context file is included in every agent's context, providing:
 - Project-specific patterns and conventions
 - Codebase structure learnings
 - Common gotchas to avoid
 - Testing requirements
 
-Agents can update `CLAUDE.md` files in subdirectories to document module-specific learnings.
+**File names by tool:**
+- **Claude Code**: `CLAUDE.md`
+- **OpenAI Codex**: `CODEX.md`
+
+Agents can update these files in subdirectories to document module-specific learnings.
 
 ## Progress Tracking
 
@@ -629,7 +637,7 @@ docker sandbox exec <sandbox-name> bash -c "
 "
 ```
 
-**API key errors ("Invalid API key"):**
+**API key errors ("Invalid API key") - Claude Code:**
 Docker sandboxes cannot access the host's keychain. Export the API key before running:
 ```bash
 # macOS - retrieve from keychain
@@ -637,6 +645,16 @@ export ANTHROPIC_API_KEY=$(security find-generic-password -s "Claude Code" -a "$
 
 # Or set manually
 export ANTHROPIC_API_KEY='your-api-key-here'
+```
+
+**Auth errors - OpenAI Codex:**
+Codex uses browser-based authentication stored in `~/.codex/auth.json`. This file is automatically copied into the sandbox.
+```bash
+# Ensure you're logged in on the host machine
+codex login
+
+# Verify auth file exists
+ls -la ~/.codex/auth.json
 ```
 
 ## Resources

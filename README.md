@@ -13,6 +13,7 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/).
 - One of the following AI coding tools installed and authenticated:
   - [Amp CLI](https://ampcode.com) (default)
   - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (`npm install -g @anthropic-ai/claude-code`)
+  - [OpenAI Codex CLI](https://github.com/openai/codex) (`npm install -g @openai/codex`)
 - `jq` installed (`brew install jq` on macOS)
 - A git repository for your project
 
@@ -101,10 +102,13 @@ Before running Ralph Extended:
    - Install from [docker.com](https://www.docker.com/products/docker-desktop/)
    - Verify: `docker sandbox --help` should show sandbox commands
 
-2. **Claude Code CLI** installed globally
-   - `npm install -g @anthropic-ai/claude-code`
+2. **AI Tool CLI** installed globally (one of the following):
+   - **Claude Code**: `npm install -g @anthropic-ai/claude-code`
+   - **OpenAI Codex**: `npm install -g @openai/codex`
 
-3. **Anthropic API Key** exported as environment variable
+3. **Authentication** configured for your chosen tool:
+
+   **For Claude Code** - Anthropic API Key exported as environment variable
    - Docker sandboxes cannot access the host's keychain
    - **Recommended**: Export directly from macOS keychain:
      ```bash
@@ -114,6 +118,11 @@ Before running Ralph Extended:
      ```bash
      export ANTHROPIC_API_KEY='your-api-key-here'
      ```
+
+   **For OpenAI Codex** - Browser-based authentication cached locally
+   - Run `codex login` on your host machine first
+   - This creates `~/.codex/auth.json` which is copied into Docker sandboxes automatically
+   - No environment variable needed
 
 4. **jq** for JSON processing
    - macOS: `brew install jq`
@@ -145,6 +154,9 @@ chmod +x scripts/ralph/ralph-extended.sh
 # Specify a Claude model (e.g., Opus 4.5 for complex tasks)
 ./scripts/ralph/ralph-extended.sh --tool claude --model claude-opus-4-20250514 [max_iterations]
 
+# Using OpenAI Codex with Docker Sandbox
+./scripts/ralph/ralph-extended.sh --tool codex [max_iterations]
+
 # Disable sandbox isolation (legacy mode)
 ./scripts/ralph/ralph-extended.sh --tool claude --no-sandbox [max_iterations]
 
@@ -153,7 +165,7 @@ chmod +x scripts/ralph/ralph-extended.sh
 ```
 
 **Available options:**
-- `--tool`: AI tool to use (`claude` or `amp`, default: `claude`)
+- `--tool`: AI tool to use (`claude`, `codex`, or `amp`, default: `claude`)
 - `--model`: Claude model to use (e.g., `claude-sonnet-4-20250514`, `claude-opus-4-20250514`)
 - `--no-sandbox`: Disable Docker sandbox isolation (runs agents on host)
 - `--sandbox`: Enable Docker sandbox isolation (default)

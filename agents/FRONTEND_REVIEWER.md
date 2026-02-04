@@ -237,7 +237,9 @@ Each issue should include:
 
 ## Stop Conditions
 
-End your response with ONE of these:
+Before your final signal, output your context window usage: `CONTEXT_USAGE: XX%` (replace XX with your current context percentage)
+
+Then end your response with ONE of these:
 - `FRONTEND_REVIEW_PASSED` - Code approved, ready for QA phase
 - `FRONTEND_REVIEW_FAILED` - Issues found, routing back to frontend dev
 - `FRONTEND_REVIEW_PASSED_NO_WORK` - No frontend work was done, skipping to QA

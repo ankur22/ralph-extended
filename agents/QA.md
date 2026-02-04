@@ -132,7 +132,9 @@ You perform automated testing using k6 (functional API tests and browser e2e tes
 
 ## Output Completion Marker (REQUIRED)
 
-**You MUST end your final response with ONE of these markers:**
+**Before your final marker, output your context window usage: `CONTEXT_USAGE: XX%`** (replace XX with your current context percentage)
+
+**Then end your final response with ONE of these markers:**
 
 - `QA_TESTING_COMPLETE` - All tests passed, feature ready for deployment
 - `QA_NO_TESTING` - No QA testing needed for this feature
@@ -353,4 +355,4 @@ And update the state and issues:
 
 ## Stop Condition
 
-**CRITICAL:** You MUST end your response with one of the completion markers listed above in the "Output Completion Marker" section. The orchestrator will not proceed without it.
+**CRITICAL:** Before your final marker, output `CONTEXT_USAGE: XX%` with your current context percentage. Then end your response with one of the completion markers listed above in the "Output Completion Marker" section. The orchestrator will not proceed without it.

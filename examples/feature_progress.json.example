@@ -16,14 +16,18 @@
             "cmd/server/main.go",
             "internal/health/handler.go",
             "internal/health/handler_test.go"
-          ]
+          ],
+          "contextUsage": "45",
+          "completedAt": "2026-02-03T10:25:00Z"
         },
         {
           "state": "backend_review",
           "agent": "backend-reviewer",
           "timestamp": "2026-02-03T10:30:00Z",
           "approved": true,
-          "notes": "Code quality excellent, all tests pass, security checks clear"
+          "notes": "Code quality excellent, all tests pass, security checks clear",
+          "contextUsage": "32",
+          "completedAt": "2026-02-03T10:45:00Z"
         },
         {
           "state": "frontend_dev",
@@ -35,14 +39,18 @@
             "src/components/HealthDashboard.tsx",
             "src/components/HealthDashboard.test.tsx",
             "src/api/health.ts"
-          ]
+          ],
+          "contextUsage": "58",
+          "completedAt": "2026-02-03T11:25:00Z"
         },
         {
           "state": "frontend_review",
           "agent": "frontend-reviewer",
           "timestamp": "2026-02-03T11:30:00Z",
           "approved": true,
-          "notes": "Excellent UI implementation. Accessibility complete. Tests comprehensive. Browser verified."
+          "notes": "Excellent UI implementation. Accessibility complete. Tests comprehensive. Browser verified.",
+          "contextUsage": "41",
+          "completedAt": "2026-02-03T11:50:00Z"
         },
         {
           "state": "qa_testing",
@@ -67,7 +75,9 @@
               "duration": "12.5s"
             }
           },
-          "approved": true
+          "approved": true,
+          "contextUsage": "67",
+          "completedAt": "2026-02-03T14:30:00Z"
         }
       ],
       "currentIssues": []

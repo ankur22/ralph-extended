@@ -209,7 +209,9 @@ Each issue should include:
 
 ## Stop Conditions
 
-End your response with ONE of these:
+Before your final signal, output your context window usage: `CONTEXT_USAGE: XX%` (replace XX with your current context percentage)
+
+Then end your response with ONE of these:
 - `BACKEND_REVIEW_PASSED` - Code approved, ready for next phase
 - `BACKEND_REVIEW_FAILED` - Issues found, routing back to backend dev
 - `BACKEND_REVIEW_PASSED_NO_WORK` - No backend work was done, skipping to next phase

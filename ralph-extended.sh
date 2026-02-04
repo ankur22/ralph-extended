@@ -371,6 +371,55 @@ spawn_agent() {
   echo "$OUTPUT"
 }
 
+# Function to extract context usage percentage from agent output
+extract_context_usage() {
+  local output=$1
+  local context_pct=""
+
+  # Try to extract context percentage from Claude Code output
+  # Format: "CONTEXT_USAGE: XX%" (we'll add this to agent instructions)
+  context_pct=$(echo "$output" | grep -oE "CONTEXT_USAGE: [0-9]+%" | grep -oE "[0-9]+" | tail -1)
+
+  if [[ -z "$context_pct" ]]; then
+    # Fallback: try to find percentage in other formats
+    context_pct=$(echo "$output" | grep -oE "context[: ]+[0-9]+%" | grep -oE "[0-9]+" | tail -1)
+  fi
+
+  if [[ -z "$context_pct" ]]; then
+    echo "unknown"
+  else
+    echo "$context_pct"
+  fi
+}
+
+# Function to record agent completion with context usage in feature_progress.json
+record_agent_completion() {
+  local feature_id=$1
+  local state=$2
+  local context_pct=$3
+  local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  # Add context usage to the latest history entry for this feature
+  # We update the most recent history entry that matches the current state
+  jq --arg state "$state" \
+     --arg context "$context_pct" \
+     --arg ts "$timestamp" \
+     '.features[$feature].history |= (
+       if length > 0 then
+         .[-1] += {contextUsage: $context, completedAt: $ts}
+       else
+         .
+       end
+     )' \
+     --arg feature "$feature_id" \
+     "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
+  mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
+
+  if [[ "$context_pct" != "unknown" ]]; then
+    echo "Context usage recorded: ${context_pct}%"
+  fi
+}
+
 # Function to determine next state based on agent output
 determine_next_state() {
   local output=$1
@@ -543,6 +592,10 @@ for i in $(seq 1 $MAX_ITERATIONS); do
 
   # Spawn appropriate agent
   AGENT_OUTPUT=$(spawn_agent "$CURRENT_STATE")
+
+  # Extract and record context usage
+  CONTEXT_USAGE=$(extract_context_usage "$AGENT_OUTPUT")
+  record_agent_completion "$CURRENT_FEATURE" "$CURRENT_STATE" "$CONTEXT_USAGE"
 
   # Determine next state based on output
   NEXT_STATE=$(determine_next_state "$AGENT_OUTPUT")

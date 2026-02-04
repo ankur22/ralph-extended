@@ -159,13 +159,32 @@ After fixes, the feature returns to `qa_testing` for retesting.
 
 ## Key Patterns
 
+### Docker Sandbox Isolation
+
+Ralph Extended uses Docker AI Sandboxes to isolate agent execution:
+
+- **Sandbox lifecycle**: Created when feature starts, removed when feature completes
+- **Persistence within feature**: Same sandbox reused for all agents in a feature (Backend Dev → Review → Frontend Dev → Review → QA)
+- **Isolation between features**: Each feature gets a fresh sandbox
+- **File synchronization**: Project directory mounted as volume - agents can read/write files
+- **Git operations**: Full git access within sandbox boundary
+- **Dependencies**: Claude Code, jq, git installed automatically on sandbox creation
+
+**Requirements:**
+- Docker Desktop 4.50+ installed and running
+- `docker sandbox` command available
+- Sufficient Docker resources (memory/CPU for container)
+
+**Disabling sandbox mode:**
+Use `--no-sandbox` flag to run agents directly on the host system (legacy mode).
+
 ### Fresh Instances
 - Each agent spawns as a fresh Claude Code instance
 - No context carries over between agents
 - Memory persists via git commits and tracking files
 
 ### File-Based Persistence
-- `feature_progress.json` - Current state, history, issues
+- `feature_progress.json` - Current state, history, issues, sandbox name
 - `progress.txt` - Append-only learning log
 - `tests.json` - Test configurations
 - Git history - Full audit trail
@@ -526,12 +545,60 @@ Automated staging and production deployment:
 - Monitors deployment health
 - Auto-rollback on critical errors
 
+## Troubleshooting
+
+### Docker Sandbox Issues
+
+**Sandbox creation fails:**
+```bash
+# Check Docker Desktop is running
+docker ps
+
+# Verify sandbox feature is available
+docker sandbox --help
+```
+
+**Agent can't access files:**
+- Ensure project directory is mounted correctly
+- Check sandbox with: `docker sandbox exec -it <sandbox-name> ls -la`
+
+**Dependencies missing in sandbox:**
+- Reinstall: `docker sandbox exec <sandbox-name> npm install -g @anthropic-ai/claude-code`
+- Check: `docker sandbox exec <sandbox-name> which claude`
+
+**Sandbox not cleaned up:**
+```bash
+# List all sandboxes
+docker sandbox ls
+
+# Remove specific sandbox
+docker sandbox rm ralph-extended-<feature-id>
+
+# Remove all ralph sandboxes
+docker sandbox ls | grep ralph-extended | awk '{print $1}' | xargs -I {} docker sandbox rm {}
+```
+
+**Git operations fail in sandbox:**
+```bash
+# Check git config in sandbox
+docker sandbox exec <sandbox-name> git config --list
+
+# Reconfigure git
+docker sandbox exec <sandbox-name> bash -c "
+  git config --global user.name 'Ralph Extended'
+  git config --global user.email 'ralph@extended.local'
+  git config --global --add safe.directory '*'
+"
+```
+
 ## Resources
 
 - [k6 Documentation](https://k6.io/docs/)
 - [k6 Browser Testing](https://k6.io/docs/using-k6-browser/)
+- [Docker AI Sandboxes](https://docs.docker.com/ai/sandboxes/)
+- [Docker Sandboxes + Claude Code](https://blog.arcade.dev/using-docker-sandboxes-with-claude-code)
 - [Ralph Extended GitHub](https://github.com/anthropics/ralph-extended)
 
 ---
 
-**Last Updated:** Phase 3 Complete - QA Agent with k6 Integration
+**Last Updated:** Phase 3 Complete - QA Agent with k6 Integration + Docker Sandbox Support

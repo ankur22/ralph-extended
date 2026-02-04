@@ -1,12 +1,13 @@
 #!/bin/bash
 # Ralph Extended - Multi-agent autonomous coding system
-# Usage: ./ralph-extended.sh [--tool amp|claude] [max_iterations]
+# Usage: ./ralph-extended.sh [--tool amp|claude] [--no-sandbox] [max_iterations]
 
 set -e
 
 # Parse arguments
 TOOL="claude"  # Default to claude for extended version
 MAX_ITERATIONS=20
+USE_DOCKER_SANDBOX=true  # Enable Docker Sandbox by default
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
@@ -18,6 +19,22 @@ while [[ $# -gt 0 ]]; do
     --tool=*)
       TOOL="${1#*=}"
       shift
+      ;;
+    --no-sandbox)
+      USE_DOCKER_SANDBOX=false
+      shift
+      ;;
+    --sandbox)
+      USE_DOCKER_SANDBOX=true
+      shift
+      ;;
+    --help)
+      echo "Usage: ./ralph-extended.sh [--tool amp|claude] [--no-sandbox] [max_iterations]"
+      echo "  --tool:       AI tool to use (amp or claude, default: claude)"
+      echo "  --no-sandbox: Disable Docker sandbox isolation (runs on host)"
+      echo "  --sandbox:    Enable Docker sandbox isolation (default)"
+      echo "  max_iterations: Maximum number of iterations (default: 20)"
+      exit 0
       ;;
     *)
       # Assume it's max_iterations if it's a number
@@ -33,6 +50,30 @@ done
 if [[ "$TOOL" != "amp" && "$TOOL" != "claude" ]]; then
   echo "Error: Invalid tool '$TOOL'. Must be 'amp' or 'claude'."
   exit 1
+fi
+
+# Trap to clean up sandboxes on script exit
+cleanup_on_exit() {
+  echo ""
+  echo "Cleaning up Docker sandboxes..."
+
+  # Get all sandboxes for current feature
+  if [ -f "$FEATURE_PROGRESS_FILE" ]; then
+    CURRENT_FEATURE=$(get_current_feature 2>/dev/null || echo "none")
+    if [[ "$CURRENT_FEATURE" != "none" ]]; then
+      SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE" 2>/dev/null || echo "null")
+
+      if [[ "$SANDBOX_NAME" != "null" ]]; then
+        echo "Removing sandbox: $SANDBOX_NAME"
+        docker sandbox rm "$SANDBOX_NAME" 2>/dev/null || true
+      fi
+    fi
+  fi
+}
+
+# Only set trap if using Docker sandbox
+if [[ "$USE_DOCKER_SANDBOX" == "true" ]]; then
+  trap cleanup_on_exit EXIT INT TERM
 fi
 
 # File paths
@@ -66,7 +107,8 @@ if [ ! -f "$FEATURE_PROGRESS_FILE" ]; then
         state: "pending",
         reviewCycleCount: 0,
         history: [],
-        currentIssues: []
+        currentIssues: [],
+        sandboxName: null
       }
     }) | add),
     config: {
@@ -108,6 +150,67 @@ increment_review_cycle() {
   mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
 
   echo "Review cycle: $new_count"
+}
+
+# Function to create Docker sandbox for a feature
+create_sandbox() {
+  local feature_id=$1
+  local sandbox_name="ralph-extended-${feature_id}"
+
+  echo "Creating Docker sandbox: $sandbox_name"
+
+  # Check if Docker is running
+  if ! docker info >/dev/null 2>&1; then
+    echo "ERROR: Docker is not running. Please start Docker Desktop."
+    exit 1
+  fi
+
+  # Check if sandbox command is available
+  if ! docker sandbox --help >/dev/null 2>&1; then
+    echo "ERROR: Docker sandbox command not found."
+    echo "Ensure Docker Desktop 4.50+ is installed with AI Sandboxes enabled."
+    exit 1
+  fi
+
+  # Create sandbox with project directory mounted
+  docker sandbox create --name "$sandbox_name" claude "$SCRIPT_DIR" || {
+    echo "ERROR: Failed to create Docker sandbox"
+    echo "Ensure Docker Desktop 4.50+ is installed and running"
+    exit 1
+  }
+
+  # Install required dependencies in sandbox
+  echo "Installing dependencies in sandbox..."
+  docker sandbox exec "$sandbox_name" bash -c "
+    # Install Claude Code if not present
+    command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code
+
+    # Install jq for JSON parsing
+    command -v jq >/dev/null 2>&1 || (apt-get update && apt-get install -y jq)
+
+    # Verify git is available (should be pre-installed)
+    command -v git >/dev/null 2>&1 || (apt-get update && apt-get install -y git)
+
+    # Configure git for sandbox use
+    git config --global user.name 'Ralph Extended'
+    git config --global user.email 'ralph@extended.local'
+    git config --global --add safe.directory '*'
+  " || {
+    echo "ERROR: Failed to install dependencies in sandbox"
+    echo "Required tools: claude, jq, git"
+    exit 1
+  }
+
+  echo "Sandbox $sandbox_name ready"
+  echo "$sandbox_name"  # Return sandbox name
+}
+
+# Function to remove Docker sandbox
+remove_sandbox() {
+  local sandbox_name=$1
+
+  echo "Removing Docker sandbox: $sandbox_name"
+  docker sandbox rm "$sandbox_name" 2>/dev/null || true
 }
 
 # Function to spawn agent based on state
@@ -165,19 +268,71 @@ spawn_agent() {
   # Check if project has CLAUDE.md for project-specific context
   PROJECT_CLAUDE="CLAUDE.md"
 
-  if [[ "$TOOL" == "amp" ]]; then
-    if [ -f "$PROJECT_CLAUDE" ]; then
-      OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+  if [[ "$USE_DOCKER_SANDBOX" == "true" ]]; then
+    # Docker sandbox execution path
+    CURRENT_FEATURE=$(get_current_feature)
+    SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE")
+
+    # Create sandbox if it doesn't exist, or reuse existing
+    if [[ "$SANDBOX_NAME" == "null" ]]; then
+      # First time for this feature - create new sandbox
+      SANDBOX_NAME=$(create_sandbox "$CURRENT_FEATURE")
+
+      # Store sandbox name in feature_progress.json
+      jq ".features[\"$CURRENT_FEATURE\"].sandboxName = \"$SANDBOX_NAME\"" \
+        "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
+      mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
+    elif ! docker sandbox ls | grep -q "$SANDBOX_NAME"; then
+      # Sandbox was removed (cleanup or manual deletion) - recreate it
+      echo "Sandbox $SANDBOX_NAME not found, recreating..."
+      SANDBOX_NAME=$(create_sandbox "$CURRENT_FEATURE")
     else
-      OUTPUT=$(cat "$prompt_file" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+      # Sandbox exists - reuse it (for long-running features)
+      echo "Reusing existing sandbox: $SANDBOX_NAME"
+    fi
+
+    echo "Using Docker sandbox: $SANDBOX_NAME"
+
+    # Execute agent inside sandbox using docker exec with stdin
+    if [[ "$TOOL" == "amp" ]]; then
+      if [ -f "$PROJECT_CLAUDE" ]; then
+        OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | \
+          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+            "amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
+      else
+        OUTPUT=$(cat "$prompt_file" | \
+          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+            "amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
+      fi
+    else
+      # Claude Code: use --dangerously-skip-permissions for autonomous operation
+      if [ -f "$PROJECT_CLAUDE" ]; then
+        echo "Using project CLAUDE.md for context"
+        OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | \
+          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+            "claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
+      else
+        OUTPUT=$(cat "$prompt_file" | \
+          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+            "claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
+      fi
     fi
   else
-    # Claude Code: use --dangerously-skip-permissions for autonomous operation, --print for output
-    if [ -f "$PROJECT_CLAUDE" ]; then
-      echo "Using project CLAUDE.md for context"
-      OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
+    # Original direct execution (no sandbox)
+    if [[ "$TOOL" == "amp" ]]; then
+      if [ -f "$PROJECT_CLAUDE" ]; then
+        OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+      else
+        OUTPUT=$(cat "$prompt_file" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
+      fi
     else
-      OUTPUT=$(cat "$prompt_file" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
+      # Claude Code: use --dangerously-skip-permissions for autonomous operation, --print for output
+      if [ -f "$PROJECT_CLAUDE" ]; then
+        echo "Using project CLAUDE.md for context"
+        OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
+      else
+        OUTPUT=$(cat "$prompt_file" | claude --dangerously-skip-permissions --print 2>&1 | tee /dev/stderr) || true
+      fi
     fi
   fi
 
@@ -239,6 +394,7 @@ determine_next_state() {
 echo "========================================================================="
 echo "  Ralph Extended - Multi-Agent System"
 echo "  Tool: $TOOL"
+echo "  Docker Sandbox: $(if [[ "$USE_DOCKER_SANDBOX" == "true" ]]; then echo "Enabled"; else echo "Disabled"; fi)"
 echo "  Max iterations: $MAX_ITERATIONS"
 echo "========================================================================="
 echo ""
@@ -273,6 +429,19 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     echo "Updating prd.json: Setting $CURRENT_FEATURE passes=true"
     jq ".userStories |= map(if .id == \"$CURRENT_FEATURE\" then .passes = true else . end)" "$PRD_FILE" > "$PRD_FILE.tmp"
     mv "$PRD_FILE.tmp" "$PRD_FILE"
+
+    # Clean up Docker sandbox for completed feature
+    if [[ "$USE_DOCKER_SANDBOX" == "true" ]]; then
+      SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE")
+      if [[ "$SANDBOX_NAME" != "null" ]]; then
+        remove_sandbox "$SANDBOX_NAME"
+
+        # Clear sandbox name from feature_progress.json
+        jq ".features[\"$CURRENT_FEATURE\"].sandboxName = null" \
+          "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
+        mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
+      fi
+    fi
 
     # Check if there are more features to work on
     NEXT_FEATURE=$(jq -r '

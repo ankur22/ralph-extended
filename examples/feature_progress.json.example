@@ -4,6 +4,7 @@
     "US-001": {
       "state": "frontend_review_passed",
       "reviewCycleCount": 0,
+      "sandboxName": null,
       "history": [
         {
           "state": "backend_dev",
@@ -74,6 +75,7 @@
     "US-002": {
       "state": "frontend_review",
       "reviewCycleCount": 1,
+      "sandboxName": "ralph-extended-US-002",
       "history": [
         {
           "state": "backend_dev",
@@ -123,6 +125,7 @@
     "US-003": {
       "state": "backend_dev",
       "reviewCycleCount": 2,
+      "sandboxName": null,
       "history": [
         {
           "state": "backend_dev",

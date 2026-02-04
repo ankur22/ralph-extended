@@ -54,7 +54,7 @@ You implement frontend features with high quality code, tests, and proper user e
    - Add a new entry to the `history` array for the current feature
    - Set current `state` to `frontend_review` (ready for review)
    - Clear `currentIssues` array (if this was a fix iteration)
-   - Include: state, agent, timestamp, summary, hasWork: true, filesChanged array
+   - Include: state, agent, timestamp, summary, hasWork: true, filesChanged array, contextUsage (your current context window usage percentage as a string, e.g., "58")
 
    **Update `progress.txt`** (APPEND, never replace):
    ```
@@ -140,7 +140,6 @@ You implement frontend features with high quality code, tests, and proper user e
    - **IMPORTANT**: The commit must include all changes: code, tracking files, documentation, CLAUDE.md updates
 
 10. **Output for orchestrator**:
-   - Output your context window usage: `CONTEXT_USAGE: XX%` (replace XX with your current context percentage)
    - End your response with: `FRONTEND_DEV_COMPLETE`
    - The orchestrator will detect this and spawn the Frontend Reviewer
 
@@ -267,8 +266,6 @@ And update the state:
 ---
 
 ## Stop Condition
-
-Before your final signal, output your context window usage: `CONTEXT_USAGE: XX%` (replace XX with your current context percentage)
 
 End your response with `FRONTEND_DEV_COMPLETE` so the orchestrator knows to spawn the Frontend Reviewer next.
 

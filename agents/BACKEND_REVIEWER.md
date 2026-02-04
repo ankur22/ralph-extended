@@ -73,7 +73,7 @@ You review backend code for security, quality, correctness, and adherence to bes
 
    **If approved** (all criteria met):
    - Update `feature_progress.json`:
-     - Add history entry with `approved: true`
+     - Add history entry with `approved: true` and `contextUsage` (your current context window usage percentage as a string, e.g., "32")
      - Set state to `backend_review_passed`
      - Clear `currentIssues`
      - DO NOT increment `reviewCycleCount` (orchestrator handles this)
@@ -91,7 +91,7 @@ You review backend code for security, quality, correctness, and adherence to bes
      - If code has functional bugs:
        - Reject anyway (safety takes priority)
    - Update `feature_progress.json`:
-     - Add history entry with `approved: false` and specific `issues` array
+     - Add history entry with `approved: false`, specific `issues` array, and `contextUsage` (your current context window usage percentage as a string, e.g., "32")
      - Set state to `backend_review_failed`
      - Set `currentIssues` to the issues array
    - Update `progress.txt` with issues found
@@ -209,9 +209,7 @@ Each issue should include:
 
 ## Stop Conditions
 
-Before your final signal, output your context window usage: `CONTEXT_USAGE: XX%` (replace XX with your current context percentage)
-
-Then end your response with ONE of these:
+End your response with ONE of these:
 - `BACKEND_REVIEW_PASSED` - Code approved, ready for next phase
 - `BACKEND_REVIEW_FAILED` - Issues found, routing back to backend dev
 - `BACKEND_REVIEW_PASSED_NO_WORK` - No backend work was done, skipping to next phase

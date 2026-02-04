@@ -217,15 +217,19 @@ Agents output specific markers for the orchestrator to detect completion:
 
 ### Context Usage Tracking
 
-Each agent outputs their context window usage percentage before the completion marker:
-```
-CONTEXT_USAGE: 45%
-BACKEND_DEV_COMPLETE
-```
+Each agent records their context window usage in the `feature_progress.json` history entry when updating tracking files. The `contextUsage` field stores the percentage as a string (e.g., "45").
 
-The orchestrator records this in `feature_progress.json` history entries:
-- `contextUsage`: Percentage of context window used (e.g., "45")
-- `completedAt`: Timestamp when agent completed
+Example history entry:
+```json
+{
+  "state": "backend_dev",
+  "agent": "backend-dev",
+  "timestamp": "2026-02-03T10:00:00Z",
+  "summary": "Implemented /health endpoint",
+  "contextUsage": "45",
+  ...
+}
+```
 
 This helps monitor:
 - Which agents/tasks consume the most context

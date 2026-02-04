@@ -273,6 +273,17 @@ spawn_agent() {
     CURRENT_FEATURE=$(get_current_feature)
     SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE")
 
+    # Check if API key is available for sandbox
+    if [ -z "$ANTHROPIC_API_KEY" ]; then
+      echo "ERROR: ANTHROPIC_API_KEY environment variable not set."
+      echo "Docker sandboxes cannot access the host's keychain."
+      echo "Please export your API key before running:"
+      echo "  export ANTHROPIC_API_KEY='your-api-key-here'"
+      echo ""
+      echo "Or disable sandbox mode with --no-sandbox flag"
+      exit 1
+    fi
+
     # Create sandbox if it doesn't exist, or reuse existing
     if [[ "$SANDBOX_NAME" == "null" ]]; then
       # First time for this feature - create new sandbox
@@ -294,14 +305,15 @@ spawn_agent() {
     echo "Using Docker sandbox: $SANDBOX_NAME"
 
     # Execute agent inside sandbox using docker exec with stdin
+    # Pass ANTHROPIC_API_KEY to sandbox
     if [[ "$TOOL" == "amp" ]]; then
       if [ -f "$PROJECT_CLAUDE" ]; then
         OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | \
-          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+          docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
             "amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
       else
         OUTPUT=$(cat "$prompt_file" | \
-          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+          docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
             "amp --dangerously-allow-all" 2>&1 | tee /dev/stderr) || true
       fi
     else
@@ -309,11 +321,11 @@ spawn_agent() {
       if [ -f "$PROJECT_CLAUDE" ]; then
         echo "Using project CLAUDE.md for context"
         OUTPUT=$(cat "$PROJECT_CLAUDE" "$prompt_file" | \
-          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+          docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
             "claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
       else
         OUTPUT=$(cat "$prompt_file" | \
-          docker sandbox exec -i "$SANDBOX_NAME" bash -c \
+          docker sandbox exec -i -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" "$SANDBOX_NAME" bash -c \
             "claude --dangerously-skip-permissions --print" 2>&1 | tee /dev/stderr) || true
       fi
     fi

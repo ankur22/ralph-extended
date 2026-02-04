@@ -104,11 +104,16 @@ Before running Ralph Extended:
 2. **Claude Code CLI** installed globally
    - `npm install -g @anthropic-ai/claude-code`
 
-3. **jq** for JSON processing
+3. **Anthropic API Key** exported as environment variable
+   - Docker sandboxes cannot access the host's keychain
+   - Export before running: `export ANTHROPIC_API_KEY='your-api-key-here'`
+   - Get your key from [console.anthropic.com](https://console.anthropic.com/)
+
+4. **jq** for JSON processing
    - macOS: `brew install jq`
    - Linux: `apt-get install jq`
 
-4. **Git** repository initialized in your project
+5. **Git** repository initialized in your project
 
 #### Installation
 

@@ -106,8 +106,14 @@ Before running Ralph Extended:
 
 3. **Anthropic API Key** exported as environment variable
    - Docker sandboxes cannot access the host's keychain
-   - Export before running: `export ANTHROPIC_API_KEY='your-api-key-here'`
-   - Get your key from [console.anthropic.com](https://console.anthropic.com/)
+   - **Recommended**: Export directly from macOS keychain:
+     ```bash
+     export ANTHROPIC_API_KEY=$(security find-generic-password -s "Claude Code" -a "$USER" -w)
+     ```
+   - **Alternative**: Get your key from [console.anthropic.com](https://console.anthropic.com/) and export manually:
+     ```bash
+     export ANTHROPIC_API_KEY='your-api-key-here'
+     ```
 
 4. **jq** for JSON processing
    - macOS: `brew install jq`

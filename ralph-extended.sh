@@ -54,8 +54,8 @@ fi
 
 # Trap to clean up sandboxes on script exit
 cleanup_on_exit() {
-  echo ""
-  echo "Cleaning up Docker sandboxes..."
+  echo "" >&2
+  echo "Cleaning up Docker sandboxes..." >&2
 
   # Get all sandboxes for current feature
   if [ -f "$FEATURE_PROGRESS_FILE" ]; then
@@ -64,7 +64,7 @@ cleanup_on_exit() {
       SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE" 2>/dev/null || echo "null")
 
       if [[ "$SANDBOX_NAME" != "null" ]]; then
-        echo "Removing sandbox: $SANDBOX_NAME"
+        echo "Removing sandbox: $SANDBOX_NAME" >&2
         docker sandbox rm "$SANDBOX_NAME" 2>/dev/null || true
       fi
     fi
@@ -157,30 +157,30 @@ create_sandbox() {
   local feature_id=$1
   local sandbox_name="ralph-extended-${feature_id}"
 
-  echo "Creating Docker sandbox: $sandbox_name"
+  echo "Creating Docker sandbox: $sandbox_name" >&2
 
   # Check if Docker is running
   if ! docker info >/dev/null 2>&1; then
-    echo "ERROR: Docker is not running. Please start Docker Desktop."
+    echo "ERROR: Docker is not running. Please start Docker Desktop." >&2
     exit 1
   fi
 
   # Check if sandbox command is available
   if ! docker sandbox --help >/dev/null 2>&1; then
-    echo "ERROR: Docker sandbox command not found."
-    echo "Ensure Docker Desktop 4.50+ is installed with AI Sandboxes enabled."
+    echo "ERROR: Docker sandbox command not found." >&2
+    echo "Ensure Docker Desktop 4.50+ is installed with AI Sandboxes enabled." >&2
     exit 1
   fi
 
   # Create sandbox with project directory mounted
-  docker sandbox create --name "$sandbox_name" claude "$SCRIPT_DIR" || {
-    echo "ERROR: Failed to create Docker sandbox"
-    echo "Ensure Docker Desktop 4.50+ is installed and running"
+  docker sandbox create --name "$sandbox_name" claude "$SCRIPT_DIR" >&2 || {
+    echo "ERROR: Failed to create Docker sandbox" >&2
+    echo "Ensure Docker Desktop 4.50+ is installed and running" >&2
     exit 1
   }
 
   # Install required dependencies in sandbox
-  echo "Installing dependencies in sandbox..."
+  echo "Installing dependencies in sandbox..." >&2
   docker sandbox exec "$sandbox_name" bash -c "
     # Install Claude Code if not present
     command -v claude >/dev/null 2>&1 || npm install -g @anthropic-ai/claude-code
@@ -195,21 +195,21 @@ create_sandbox() {
     git config --global user.name 'Ralph Extended'
     git config --global user.email 'ralph@extended.local'
     git config --global --add safe.directory '*'
-  " || {
-    echo "ERROR: Failed to install dependencies in sandbox"
-    echo "Required tools: claude, jq, git"
+  " >&2 || {
+    echo "ERROR: Failed to install dependencies in sandbox" >&2
+    echo "Required tools: claude, jq, git" >&2
     exit 1
   }
 
-  echo "Sandbox $sandbox_name ready"
-  echo "$sandbox_name"  # Return sandbox name
+  echo "Sandbox $sandbox_name ready" >&2
+  echo "$sandbox_name"  # Return sandbox name to stdout
 }
 
 # Function to remove Docker sandbox
 remove_sandbox() {
   local sandbox_name=$1
 
-  echo "Removing Docker sandbox: $sandbox_name"
+  echo "Removing Docker sandbox: $sandbox_name" >&2
   docker sandbox rm "$sandbox_name" 2>/dev/null || true
 }
 

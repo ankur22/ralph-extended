@@ -478,6 +478,11 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       fi
     fi
 
+    # Commit feature completion state
+    echo "Committing feature completion for $CURRENT_FEATURE..."
+    git add "$FEATURE_PROGRESS_FILE" "$PRD_FILE" 2>/dev/null || true
+    git commit -m "Update $CURRENT_FEATURE status to passed" 2>/dev/null || echo "Nothing to commit"
+
     # Check if there are more features to work on
     NEXT_FEATURE=$(jq -r '
       .features |
@@ -498,6 +503,16 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     else
       echo ""
       echo "All features complete!"
+
+      # Final commit of tracking files
+      echo "Committing final state..."
+      if git diff --quiet "$FEATURE_PROGRESS_FILE" "$PRD_FILE" 2>/dev/null; then
+        echo "No uncommitted changes to tracking files."
+      else
+        git add "$FEATURE_PROGRESS_FILE" "$PRD_FILE" 2>/dev/null || true
+        git commit -m "Update tracking files - all features complete" 2>/dev/null || echo "Nothing to commit or commit failed"
+      fi
+
       exit 0
     fi
   fi

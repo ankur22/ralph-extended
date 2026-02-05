@@ -229,12 +229,17 @@ create_sandbox() {
     sandbox_template="codex"
   fi
 
-  # Create sandbox with project directory mounted
-  docker sandbox create --name "$sandbox_name" "$sandbox_template" "$SCRIPT_DIR" >&2 || {
-    echo "ERROR: Failed to create Docker sandbox" >&2
-    echo "Ensure Docker Desktop 4.50+ is installed and running" >&2
-    exit 1
-  }
+  # Check if sandbox already exists
+  if docker sandbox ls 2>/dev/null | grep -q "$sandbox_name"; then
+    echo "Sandbox $sandbox_name already exists, reusing it" >&2
+  else
+    # Create sandbox with project directory mounted
+    docker sandbox create --name "$sandbox_name" "$sandbox_template" "$SCRIPT_DIR" >&2 || {
+      echo "ERROR: Failed to create Docker sandbox" >&2
+      echo "Ensure Docker Desktop 4.50+ is installed and running" >&2
+      exit 1
+    }
+  fi
 
   # Install required dependencies in sandbox based on tool
   echo "Installing dependencies in sandbox..." >&2

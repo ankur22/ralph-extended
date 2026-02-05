@@ -14,7 +14,9 @@
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": true,
+      "requiresFrontend": false
     },
     {
       "id": "US-002",
@@ -24,11 +26,13 @@
         "Each task card shows colored priority badge (red=high, yellow=medium, gray=low)",
         "Priority visible without hovering or clicking",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser using Chrome DevTools MCP"
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": false,
+      "requiresFrontend": true
     },
     {
       "id": "US-003",
@@ -39,11 +43,13 @@
         "Shows current priority as selected",
         "Saves immediately on selection change",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser using Chrome DevTools MCP"
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": true,
+      "requiresFrontend": true
     },
     {
       "id": "US-004",
@@ -54,11 +60,13 @@
         "Filter persists in URL params",
         "Empty state message when no tasks match filter",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser using Chrome DevTools MCP"
       ],
       "priority": 4,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": true,
+      "requiresFrontend": true
     }
   ]
 }

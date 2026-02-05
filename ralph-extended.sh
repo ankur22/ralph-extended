@@ -84,7 +84,7 @@ cleanup_on_exit() {
     if [[ "$CURRENT_FEATURE" != "none" ]]; then
       SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE" 2>/dev/null || echo "null")
 
-      if [[ "$SANDBOX_NAME" != "null" ]]; then
+      if [[ "$SANDBOX_NAME" != "null" ]] && [[ -n "$SANDBOX_NAME" ]]; then
         echo "Removing sandbox: $SANDBOX_NAME" >&2
         docker sandbox rm "$SANDBOX_NAME" 2>/dev/null || true
       fi
@@ -121,6 +121,7 @@ if [ ! -f "$FEATURE_PROGRESS_FILE" ]; then
   fi
 
   # Extract user stories from prd.json and create feature_progress.json
+  # Determine initial state based on requiresBackend/requiresFrontend (default both to true)
   jq '{
     currentFeature: (.userStories[0].id // "none"),
     features: (.userStories | map({
@@ -129,7 +130,9 @@ if [ ! -f "$FEATURE_PROGRESS_FILE" ]; then
         reviewCycleCount: 0,
         history: [],
         currentIssues: [],
-        sandboxName: null
+        sandboxName: null,
+        requiresBackend: (.requiresBackend // true),
+        requiresFrontend: (.requiresFrontend // true)
       }
     }) | add),
     config: {
@@ -138,15 +141,44 @@ if [ ! -f "$FEATURE_PROGRESS_FILE" ]; then
       maxQACycles: 5,
       skipQAAfterMax: true
     }
-  } | .features[.currentFeature].state = "backend_dev"' "$PRD_FILE" > "$FEATURE_PROGRESS_FILE"
+  }' "$PRD_FILE" > "$FEATURE_PROGRESS_FILE"
+
+  # Set initial state for first feature based on its requirements
+  FIRST_FEATURE=$(jq -r '.currentFeature' "$FEATURE_PROGRESS_FILE")
+  REQUIRES_BACKEND=$(jq -r ".features[\"$FIRST_FEATURE\"].requiresBackend" "$FEATURE_PROGRESS_FILE")
+
+  if [[ "$REQUIRES_BACKEND" == "true" ]]; then
+    jq ".features[\"$FIRST_FEATURE\"].state = \"backend_dev\"" "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
+  else
+    jq ".features[\"$FIRST_FEATURE\"].state = \"frontend_dev\"" "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
+  fi
+  mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
 
   echo "Created feature_progress.json with $(jq '.userStories | length' "$PRD_FILE") features"
-  echo "Starting with feature: $(jq -r '.currentFeature' "$FEATURE_PROGRESS_FILE")"
+  echo "Starting with feature: $FIRST_FEATURE"
+  echo "  Requires backend: $REQUIRES_BACKEND"
+  echo "  Requires frontend: $(jq -r ".features[\"$FIRST_FEATURE\"].requiresFrontend" "$FEATURE_PROGRESS_FILE")"
 fi
 
 # Function to get current state from feature_progress.json
 get_current_state() {
   jq -r '.features[.currentFeature].state // "none"' "$FEATURE_PROGRESS_FILE"
+}
+
+# Function to check if current feature requires backend
+requires_backend() {
+  local feature_id=$(get_current_feature)
+  local result=$(jq -r ".features[\"$feature_id\"].requiresBackend" "$FEATURE_PROGRESS_FILE")
+  # Default to true if null (jq returns "null" string for missing fields with -r)
+  [[ "$result" != "false" ]]
+}
+
+# Function to check if current feature requires frontend
+requires_frontend() {
+  local feature_id=$(get_current_feature)
+  local result=$(jq -r ".features[\"$feature_id\"].requiresFrontend" "$FEATURE_PROGRESS_FILE")
+  # Default to true if null (jq returns "null" string for missing fields with -r)
+  [[ "$result" != "false" ]]
 }
 
 # Function to get current feature ID
@@ -199,12 +231,17 @@ create_sandbox() {
     sandbox_template="codex"
   fi
 
-  # Create sandbox with project directory mounted
-  docker sandbox create --name "$sandbox_name" "$sandbox_template" "$SCRIPT_DIR" >&2 || {
-    echo "ERROR: Failed to create Docker sandbox" >&2
-    echo "Ensure Docker Desktop 4.50+ is installed and running" >&2
-    exit 1
-  }
+  # Check if sandbox already exists
+  if docker sandbox ls 2>/dev/null | grep -q "$sandbox_name"; then
+    echo "Sandbox $sandbox_name already exists, reusing it" >&2
+  else
+    # Create sandbox with project directory mounted
+    docker sandbox create --name "$sandbox_name" "$sandbox_template" "$SCRIPT_DIR" >&2 || {
+      echo "ERROR: Failed to create Docker sandbox" >&2
+      echo "Ensure Docker Desktop 4.50+ is installed and running" >&2
+      exit 1
+    }
+  fi
 
   # Install required dependencies in sandbox based on tool
   echo "Installing dependencies in sandbox..." >&2
@@ -344,7 +381,7 @@ spawn_agent() {
     fi
 
     # Create sandbox if it doesn't exist, or reuse existing
-    if [[ "$SANDBOX_NAME" == "null" ]]; then
+    if [[ "$SANDBOX_NAME" == "null" ]] || [[ -z "$SANDBOX_NAME" ]]; then
       # First time for this feature - create new sandbox
       SANDBOX_NAME=$(create_sandbox "$CURRENT_FEATURE")
 
@@ -523,12 +560,19 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "Current feature: $CURRENT_FEATURE"
   echo "Current state: $CURRENT_STATE"
 
+  # Show phase requirements for current feature
+  # Note: Can't use "// true" as jq treats false as falsy and replaces it
+  REQ_BACKEND=$(jq -r ".features[\"$CURRENT_FEATURE\"].requiresBackend" "$FEATURE_PROGRESS_FILE")
+  REQ_FRONTEND=$(jq -r ".features[\"$CURRENT_FEATURE\"].requiresFrontend" "$FEATURE_PROGRESS_FILE")
+  [[ "$REQ_BACKEND" == "null" ]] && REQ_BACKEND="true"
+  [[ "$REQ_FRONTEND" == "null" ]] && REQ_FRONTEND="true"
+  echo "Phases: Backend=$REQ_BACKEND, Frontend=$REQ_FRONTEND"
+
   # Check if feature is fully complete (QA passed)
   if [[ "$CURRENT_STATE" == "qa_passed" ]]; then
     echo ""
     echo "Feature $CURRENT_FEATURE fully complete!"
-    echo "Backend, Frontend, and QA phases all passed."
-    echo "Feature is ready for deployment."
+    echo "All required phases passed. Feature is ready for deployment."
 
     # Update prd.json to mark feature as complete
     echo "Updating prd.json: Setting $CURRENT_FEATURE passes=true"
@@ -538,7 +582,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     # Clean up Docker sandbox for completed feature
     if [[ "$USE_DOCKER_SANDBOX" == "true" ]]; then
       SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE")
-      if [[ "$SANDBOX_NAME" != "null" ]]; then
+      if [[ "$SANDBOX_NAME" != "null" ]] && [[ -n "$SANDBOX_NAME" ]]; then
         remove_sandbox "$SANDBOX_NAME"
 
         # Clear sandbox name from feature_progress.json
@@ -565,8 +609,26 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     if [[ "$NEXT_FEATURE" != "none" ]]; then
       echo ""
       echo "Moving to next feature: $NEXT_FEATURE"
-      # Update currentFeature and set new feature to backend_dev
-      jq ".currentFeature = \"$NEXT_FEATURE\" | .features[\"$NEXT_FEATURE\"].state = \"backend_dev\"" "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
+
+      # Determine initial state based on feature requirements
+      # Note: Can't use "// true" as jq treats false as falsy
+      NEXT_REQUIRES_BACKEND=$(jq -r ".features[\"$NEXT_FEATURE\"].requiresBackend" "$FEATURE_PROGRESS_FILE")
+      NEXT_REQUIRES_FRONTEND=$(jq -r ".features[\"$NEXT_FEATURE\"].requiresFrontend" "$FEATURE_PROGRESS_FILE")
+      [[ "$NEXT_REQUIRES_BACKEND" == "null" ]] && NEXT_REQUIRES_BACKEND="true"
+      [[ "$NEXT_REQUIRES_FRONTEND" == "null" ]] && NEXT_REQUIRES_FRONTEND="true"
+
+      if [[ "$NEXT_REQUIRES_BACKEND" != "false" ]]; then
+        INITIAL_STATE="backend_dev"
+      else
+        INITIAL_STATE="frontend_dev"
+      fi
+
+      echo "  Requires backend: $NEXT_REQUIRES_BACKEND"
+      echo "  Requires frontend: $NEXT_REQUIRES_FRONTEND"
+      echo "  Starting at: $INITIAL_STATE"
+
+      # Update currentFeature and set initial state
+      jq ".currentFeature = \"$NEXT_FEATURE\" | .features[\"$NEXT_FEATURE\"].state = \"$INITIAL_STATE\"" "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
       mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
       sleep 2
       continue
@@ -587,14 +649,23 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     fi
   fi
 
-  # Handle auto-transition from backend to frontend
+  # Handle auto-transition from backend to frontend (or QA if no frontend needed)
   if [[ "$CURRENT_STATE" == "backend_review_passed" ]]; then
     echo ""
-    echo "Backend phase complete! Auto-transitioning to frontend development."
-    # Update state to frontend_dev
-    jq ".features[\"$CURRENT_FEATURE\"].state = \"frontend_dev\"" "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
-    mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
-    echo "State updated to: frontend_dev"
+    echo "Backend phase complete!"
+
+    # Check if frontend is required for this feature
+    if requires_frontend; then
+      echo "Auto-transitioning to frontend development."
+      jq ".features[\"$CURRENT_FEATURE\"].state = \"frontend_dev\"" "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
+      mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
+      echo "State updated to: frontend_dev"
+    else
+      echo "No frontend required. Auto-transitioning to QA testing."
+      jq ".features[\"$CURRENT_FEATURE\"].state = \"qa_testing\"" "$FEATURE_PROGRESS_FILE" > "$FEATURE_PROGRESS_FILE.tmp"
+      mv "$FEATURE_PROGRESS_FILE.tmp" "$FEATURE_PROGRESS_FILE"
+      echo "State updated to: qa_testing"
+    fi
     sleep 1
     continue
   fi

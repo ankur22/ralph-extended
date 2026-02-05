@@ -139,14 +139,36 @@ Watch as agents:
 
 ## State Management
 
+### Per-Story Phase Configuration
+
+Each user story can specify which phases it requires:
+
+```json
+{
+  "id": "US-001",
+  "title": "Add database migration",
+  "requiresBackend": true,
+  "requiresFrontend": false,
+  ...
+}
+```
+
+| Layers | requiresBackend | requiresFrontend | Phases |
+|--------|-----------------|------------------|--------|
+| Backend only | true | false | backend_dev → backend_review → qa_testing |
+| Frontend only | false | true | frontend_dev → frontend_review → qa_testing |
+| Both (default) | true | true | Full pipeline |
+
+**Default:** Both fields default to `true` if not specified (backward compatible).
+
 ### Feature States
-Each feature progresses through these states:
+Each feature progresses through these states (phases may be skipped based on configuration):
 
 - `pending` - Not started yet
-- `backend_dev` - Backend developer working
+- `backend_dev` - Backend developer working (skipped if requiresBackend=false)
 - `backend_review` - Backend reviewer evaluating
-- `backend_review_passed` - Backend approved, auto-transition to frontend
-- `frontend_dev` - Frontend developer working
+- `backend_review_passed` - Backend approved, auto-transition to frontend or QA
+- `frontend_dev` - Frontend developer working (skipped if requiresFrontend=false)
 - `frontend_review` - Frontend reviewer evaluating
 - `frontend_review_passed` - Frontend approved, auto-transition to QA
 - `qa_testing` - QA engineer testing

@@ -5,6 +5,8 @@
       "state": "frontend_review_passed",
       "reviewCycleCount": 0,
       "sandboxName": null,
+      "requiresBackend": true,
+      "requiresFrontend": true,
       "history": [
         {
           "state": "backend_dev",
@@ -86,6 +88,8 @@
       "state": "frontend_review",
       "reviewCycleCount": 1,
       "sandboxName": "ralph-extended-US-002",
+      "requiresBackend": true,
+      "requiresFrontend": true,
       "history": [
         {
           "state": "backend_dev",
@@ -136,6 +140,8 @@
       "state": "backend_dev",
       "reviewCycleCount": 2,
       "sandboxName": null,
+      "requiresBackend": true,
+      "requiresFrontend": true,
       "history": [
         {
           "state": "backend_dev",

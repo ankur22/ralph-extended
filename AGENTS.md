@@ -90,9 +90,16 @@ The system uses **5 specialized agents** that work sequentially:
 ### Examples & Documentation
 - `examples/feature_progress.json.example` - Example tracking structure with QA history
 - `examples/tests.json.example` - Example test configuration with functional and e2e tests
+- `examples/prd.json.example` - Example PRD format with per-story phase configuration
 - `docs/PHASE1_COMPLETE.md` - Backend phase documentation
 - `docs/PHASE2_COMPLETE.md` - Frontend phase documentation
 - `docs/PHASE3_COMPLETE.md` - QA phase documentation (complete system overview)
+
+### PRD Skills & Research
+- `skills/prd/SKILL.md` - PRD generator skill with optional research phase
+- `skills/ralph/SKILL.md` - PRD to JSON converter skill
+- `tasks/research-*.md` - Research findings (codebase analysis, external docs, recommendations)
+- `tasks/prd-*.md` - Generated PRD markdown files
 
 ### Test Templates
 - `test-project/tests/k6/template-functional.js` - API testing template
@@ -102,6 +109,33 @@ The system uses **5 specialized agents** that work sequentially:
 ## Getting Started
 
 ### 1. Create a PRD
+
+#### Option A: Use the PRD Skill (Recommended)
+
+The PRD skill includes an optional **research phase** for complex features:
+
+```
+Load the prd skill and create a PRD for [your feature description]
+```
+
+**Research Phase (recommended for complex codebases):**
+1. Ask if you want research first (thorough vs quick vs skip)
+2. Gather context from CLAUDE.md, AGENTS.md, README.md, progress.txt
+3. Ask where to look in the codebase and what external resources to check
+4. Codebase deep dive using Explore agent
+5. External research (official docs, GitHub issues, community forums)
+6. Save findings to `tasks/research-[feature-name].md`
+7. Present summary for validation before proceeding to PRD
+
+After research, answer clarifying questions. The skill saves the PRD to `tasks/prd-[feature-name].md`.
+
+Then use the Ralph skill to convert to JSON:
+```
+Load the ralph skill and convert tasks/prd-[feature-name].md to prd.json
+```
+
+#### Option B: Create prd.json Manually
+
 Create `prd.json` with your user stories:
 
 ```json
@@ -261,6 +295,47 @@ This helps monitor:
 - Which agents/tasks consume the most context
 - When context limits might become a concern
 - Historical patterns for optimization
+
+### PRD Research Phase
+
+The PRD skill (`/prd`) includes an optional research phase that helps create better user stories for complex or unfamiliar codebases.
+
+**When to use research:**
+- Complex features in large codebases
+- Features in unfamiliar projects (e.g., contributing to k6)
+- Features that may interact with existing systems
+
+**Research outputs:**
+- `tasks/research-[feature].md` - Detailed findings including:
+  - **Codebase analysis**: Relevant files, existing patterns, reusable components
+  - **External research**: Official docs, GitHub issues, community insights
+  - **Technical considerations**: Constraints, dependencies, risks
+  - **Recommendations**: Suggested approach, files to modify/create
+
+**Research depth options:**
+- **Thorough**: Full codebase exploration + external research (recommended for complex features)
+- **Quick**: Targeted search based on user guidance
+- **Skip**: Jump directly to PRD generation (for simple features in familiar codebases)
+
+**Benefits:**
+- More realistic user stories aligned with existing patterns
+- Better layer decisions (Backend vs Frontend vs Both)
+- Discovery of reusable components and utilities
+- Awareness of constraints and dependencies before implementation
+
+### Browser Verification
+
+Frontend stories should include browser verification using [Chrome DevTools MCP](https://github.com/anthropics/anthropic-quickstarts/tree/main/mcp-servers/chrome-devtools-mcp):
+
+```
+"Verify in browser using Chrome DevTools MCP"
+```
+
+This allows agents to:
+- Navigate to pages and interact with UI
+- Verify visual changes work correctly
+- Check accessibility attributes
+- Confirm error states and edge cases
 
 ### Auto-Transitions
 The orchestrator automatically transitions between phases:
@@ -685,8 +760,9 @@ ls -la ~/.codex/auth.json
 - [k6 Browser Testing](https://k6.io/docs/using-k6-browser/)
 - [Docker AI Sandboxes](https://docs.docker.com/ai/sandboxes/)
 - [Docker Sandboxes + Claude Code](https://blog.arcade.dev/using-docker-sandboxes-with-claude-code)
-- [Ralph Extended GitHub](https://github.com/anthropics/ralph-extended)
+- [Chrome DevTools MCP](https://github.com/anthropics/anthropic-quickstarts/tree/main/mcp-servers/chrome-devtools-mcp) - Browser automation for UI verification
+- [OpenAI Codex CLI](https://github.com/openai/codex) - Alternative AI tool support
 
 ---
 
-**Last Updated:** Phase 3 Complete - QA Agent with k6 Integration + Docker Sandbox Support
+**Last Updated:** PRD Research Phase + Per-Story Phase Config + Codex Support + Docker Sandbox

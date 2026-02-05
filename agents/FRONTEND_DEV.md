@@ -45,7 +45,7 @@ You implement frontend features with high quality code, tests, and proper user e
    - Run linter (e.g., `eslint`, `prettier`)
    - Run all tests - they MUST pass
    - Build the application to verify no build errors
-   - **CRITICAL**: Test in browser (if dev-browser skill available) to verify UI works
+   - **CRITICAL**: Test in browser (if Chrome DevTools MCP available) to verify UI works
    - Fix any issues found
 
 6. **Update tracking files**:

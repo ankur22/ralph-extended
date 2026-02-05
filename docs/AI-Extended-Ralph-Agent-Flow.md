@@ -547,7 +547,7 @@ For functional testing, performance testing, and browser automation:
 | Tool                   | Type               | MCP Server                                  | Purpose                                        |
 | ---------------------- | ------------------ | ------------------------------------------- | ---------------------------------------------- |
 | **k6 Browser**         | Browser Automation | [k6-mcp](https://github.com/grafana/mcp-k6) | Browser automation with k6 browser module      |
-| **dev-browser skill**  | Skill              | -                                           | Visual verification of UI changes (from Ralph) |
+| **Chrome DevTools MCP**| MCP Server         | [chrome-devtools-mcp](https://github.com/anthropics/anthropic-quickstarts/tree/main/mcp-servers/chrome-devtools-mcp) | Visual verification of UI changes |
 | **cursor-ide-browser** | MCP Server         | -                                           | Browser interaction from Cursor                |
 | **Playwright MCP**     | MCP Server         | -                                           | Programmatic browser control                   |
 

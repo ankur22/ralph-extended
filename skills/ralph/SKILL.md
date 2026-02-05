@@ -35,11 +35,25 @@ Take a PRD (markdown file or text) and convert it to `prd.json` in your ralph di
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": true,
+      "requiresFrontend": false
     }
   ]
 }
 ```
+
+### Layers Field Mapping
+
+The PRD's **Layers** field maps to `requiresBackend` and `requiresFrontend`:
+
+| PRD Layers | requiresBackend | requiresFrontend |
+|------------|-----------------|------------------|
+| Backend    | true            | false            |
+| Frontend   | false           | true             |
+| Both       | true            | true             |
+
+**Default (if not specified):** Both fields default to `true` for backward compatibility.
 
 ---
 
@@ -109,10 +123,10 @@ For stories with testable logic, also include:
 
 ### For stories that change UI, also include:
 ```
-"Verify in browser using dev-browser skill"
+"Verify in browser using Chrome DevTools MCP"
 ```
 
-Frontend stories are NOT complete until visually verified. Ralph will use the dev-browser skill to navigate to the page, interact with the UI, and confirm changes work.
+Frontend stories are NOT complete until visually verified. Ralph will use the Chrome DevTools MCP to navigate to the page, interact with the UI, and confirm changes work.
 
 ---
 
@@ -179,7 +193,9 @@ Add ability to mark tasks with different statuses.
       ],
       "priority": 1,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": true,
+      "requiresFrontend": false
     },
     {
       "id": "US-002",
@@ -189,11 +205,13 @@ Add ability to mark tasks with different statuses.
         "Each task card shows colored status badge",
         "Badge colors: gray=pending, blue=in_progress, green=done",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser using Chrome DevTools MCP"
       ],
       "priority": 2,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": false,
+      "requiresFrontend": true
     },
     {
       "id": "US-003",
@@ -204,11 +222,13 @@ Add ability to mark tasks with different statuses.
         "Changing status saves immediately",
         "UI updates without page refresh",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser using Chrome DevTools MCP"
       ],
       "priority": 3,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": true,
+      "requiresFrontend": true
     },
     {
       "id": "US-004",
@@ -218,11 +238,13 @@ Add ability to mark tasks with different statuses.
         "Filter dropdown: All | Pending | In Progress | Done",
         "Filter persists in URL params",
         "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Verify in browser using Chrome DevTools MCP"
       ],
       "priority": 4,
       "passes": false,
-      "notes": ""
+      "notes": "",
+      "requiresBackend": true,
+      "requiresFrontend": true
     }
   ]
 }
@@ -253,6 +275,6 @@ Before writing prd.json, verify:
 - [ ] Each story is completable in one iteration (small enough)
 - [ ] Stories are ordered by dependency (schema to backend to UI)
 - [ ] Every story has "Typecheck passes" as criterion
-- [ ] UI stories have "Verify in browser using dev-browser skill" as criterion
+- [ ] UI stories have "Verify in browser using Chrome DevTools MCP" as criterion
 - [ ] Acceptance criteria are verifiable (not vague)
 - [ ] No story depends on a later story

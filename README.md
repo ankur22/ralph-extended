@@ -173,12 +173,27 @@ chmod +x scripts/ralph/ralph-extended.sh
 Default is 20 iterations. Ralph Extended will:
 1. Create `feature_progress.json` from your `prd.json` (automatically on first run)
 2. Create a Docker sandbox for each feature (isolated execution environment)
-3. Route each feature through the agent pipeline:
-   - Backend Dev → Backend Review → Frontend Dev → Frontend Review → QA
+3. Route each feature through the appropriate agent pipeline based on its layer requirements:
+   - **Both (default):** Backend Dev → Backend Review → Frontend Dev → Frontend Review → QA
+   - **Backend only:** Backend Dev → Backend Review → QA
+   - **Frontend only:** Frontend Dev → Frontend Review → QA
 4. Route issues back to the appropriate dev agent based on failure type
 5. Track state and history in `feature_progress.json`
 6. Update `progress.txt` with learnings from each agent
 7. Clean up sandbox when feature completes
+
+**Per-Story Phase Configuration:**
+Each user story in `prd.json` can specify which phases it requires:
+```json
+{
+  "id": "US-001",
+  "title": "Add database migration",
+  "requiresBackend": true,
+  "requiresFrontend": false,
+  ...
+}
+```
+This allows backend-only stories (e.g., migrations, API endpoints) to skip frontend phases, and frontend-only stories (e.g., UI tweaks) to skip backend phases.
 
 **Docker Sandbox Mode (Default):**
 - Agents run inside isolated Docker containers

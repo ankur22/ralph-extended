@@ -168,15 +168,17 @@ get_current_state() {
 # Function to check if current feature requires backend
 requires_backend() {
   local feature_id=$(get_current_feature)
-  local result=$(jq -r ".features[\"$feature_id\"].requiresBackend // true" "$FEATURE_PROGRESS_FILE")
-  [[ "$result" == "true" ]]
+  local result=$(jq -r ".features[\"$feature_id\"].requiresBackend" "$FEATURE_PROGRESS_FILE")
+  # Default to true if null (jq returns "null" string for missing fields with -r)
+  [[ "$result" != "false" ]]
 }
 
 # Function to check if current feature requires frontend
 requires_frontend() {
   local feature_id=$(get_current_feature)
-  local result=$(jq -r ".features[\"$feature_id\"].requiresFrontend // true" "$FEATURE_PROGRESS_FILE")
-  [[ "$result" == "true" ]]
+  local result=$(jq -r ".features[\"$feature_id\"].requiresFrontend" "$FEATURE_PROGRESS_FILE")
+  # Default to true if null (jq returns "null" string for missing fields with -r)
+  [[ "$result" != "false" ]]
 }
 
 # Function to get current feature ID
@@ -559,8 +561,11 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "Current state: $CURRENT_STATE"
 
   # Show phase requirements for current feature
-  REQ_BACKEND=$(jq -r ".features[\"$CURRENT_FEATURE\"].requiresBackend // true" "$FEATURE_PROGRESS_FILE")
-  REQ_FRONTEND=$(jq -r ".features[\"$CURRENT_FEATURE\"].requiresFrontend // true" "$FEATURE_PROGRESS_FILE")
+  # Note: Can't use "// true" as jq treats false as falsy and replaces it
+  REQ_BACKEND=$(jq -r ".features[\"$CURRENT_FEATURE\"].requiresBackend" "$FEATURE_PROGRESS_FILE")
+  REQ_FRONTEND=$(jq -r ".features[\"$CURRENT_FEATURE\"].requiresFrontend" "$FEATURE_PROGRESS_FILE")
+  [[ "$REQ_BACKEND" == "null" ]] && REQ_BACKEND="true"
+  [[ "$REQ_FRONTEND" == "null" ]] && REQ_FRONTEND="true"
   echo "Phases: Backend=$REQ_BACKEND, Frontend=$REQ_FRONTEND"
 
   # Check if feature is fully complete (QA passed)
@@ -606,15 +611,20 @@ for i in $(seq 1 $MAX_ITERATIONS); do
       echo "Moving to next feature: $NEXT_FEATURE"
 
       # Determine initial state based on feature requirements
-      NEXT_REQUIRES_BACKEND=$(jq -r ".features[\"$NEXT_FEATURE\"].requiresBackend // true" "$FEATURE_PROGRESS_FILE")
-      if [[ "$NEXT_REQUIRES_BACKEND" == "true" ]]; then
+      # Note: Can't use "// true" as jq treats false as falsy
+      NEXT_REQUIRES_BACKEND=$(jq -r ".features[\"$NEXT_FEATURE\"].requiresBackend" "$FEATURE_PROGRESS_FILE")
+      NEXT_REQUIRES_FRONTEND=$(jq -r ".features[\"$NEXT_FEATURE\"].requiresFrontend" "$FEATURE_PROGRESS_FILE")
+      [[ "$NEXT_REQUIRES_BACKEND" == "null" ]] && NEXT_REQUIRES_BACKEND="true"
+      [[ "$NEXT_REQUIRES_FRONTEND" == "null" ]] && NEXT_REQUIRES_FRONTEND="true"
+
+      if [[ "$NEXT_REQUIRES_BACKEND" != "false" ]]; then
         INITIAL_STATE="backend_dev"
       else
         INITIAL_STATE="frontend_dev"
       fi
 
       echo "  Requires backend: $NEXT_REQUIRES_BACKEND"
-      echo "  Requires frontend: $(jq -r ".features[\"$NEXT_FEATURE\"].requiresFrontend // true" "$FEATURE_PROGRESS_FILE")"
+      echo "  Requires frontend: $NEXT_REQUIRES_FRONTEND"
       echo "  Starting at: $INITIAL_STATE"
 
       # Update currentFeature and set initial state

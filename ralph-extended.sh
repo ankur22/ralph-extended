@@ -84,7 +84,7 @@ cleanup_on_exit() {
     if [[ "$CURRENT_FEATURE" != "none" ]]; then
       SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE" 2>/dev/null || echo "null")
 
-      if [[ "$SANDBOX_NAME" != "null" ]]; then
+      if [[ "$SANDBOX_NAME" != "null" ]] && [[ -n "$SANDBOX_NAME" ]]; then
         echo "Removing sandbox: $SANDBOX_NAME" >&2
         docker sandbox rm "$SANDBOX_NAME" 2>/dev/null || true
       fi
@@ -374,7 +374,7 @@ spawn_agent() {
     fi
 
     # Create sandbox if it doesn't exist, or reuse existing
-    if [[ "$SANDBOX_NAME" == "null" ]]; then
+    if [[ "$SANDBOX_NAME" == "null" ]] || [[ -z "$SANDBOX_NAME" ]]; then
       # First time for this feature - create new sandbox
       SANDBOX_NAME=$(create_sandbox "$CURRENT_FEATURE")
 
@@ -572,7 +572,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     # Clean up Docker sandbox for completed feature
     if [[ "$USE_DOCKER_SANDBOX" == "true" ]]; then
       SANDBOX_NAME=$(jq -r ".features[\"$CURRENT_FEATURE\"].sandboxName // \"null\"" "$FEATURE_PROGRESS_FILE")
-      if [[ "$SANDBOX_NAME" != "null" ]]; then
+      if [[ "$SANDBOX_NAME" != "null" ]] && [[ -n "$SANDBOX_NAME" ]]; then
         remove_sandbox "$SANDBOX_NAME"
 
         # Clear sandbox name from feature_progress.json

@@ -169,3 +169,22 @@
 .react-flow__controls-button:last-child {
   border-bottom: none;
 }
+
+.legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid #eee;
+  flex-wrap: wrap;
+}
+
+.legend span {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 2px solid;
+  border-radius: 4px;
+}

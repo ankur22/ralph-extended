@@ -239,7 +239,16 @@ Use the PRD skill to generate a detailed requirements document:
 Load the prd skill and create a PRD for [your feature description]
 ```
 
-Answer the clarifying questions. The skill saves output to `tasks/prd-[feature-name].md`.
+The skill will ask if you want to conduct **research first** (recommended for complex features or unfamiliar codebases). If you choose research:
+
+1. **Codebase exploration** - Searches for relevant code, patterns, and existing features
+2. **External research** - Reviews official docs, GitHub issues, and community resources
+3. **Research report** - Saves findings to `tasks/research-[feature-name].md`
+4. **Summary validation** - Presents key findings before proceeding
+
+After research (or if skipped), answer the clarifying questions. The skill saves output to `tasks/prd-[feature-name].md`.
+
+**Tip:** For complex projects like k6 or large codebases, always choose thorough research. It helps create more realistic user stories that align with existing patterns.
 
 ### 2. Convert PRD to Ralph format
 
@@ -283,8 +292,10 @@ Ralph will:
 | `prd.json` | User stories with `passes` status (the task list) |
 | `prd.json.example` | Example PRD format for reference |
 | `progress.txt` | Append-only learnings for future iterations |
-| `skills/prd/` | Skill for generating PRDs (works with Amp and Claude Code) |
+| `skills/prd/` | Skill for generating PRDs with optional research phase (works with Amp and Claude Code) |
 | `skills/ralph/` | Skill for converting PRDs to JSON (works with Amp and Claude Code) |
+| `tasks/research-*.md` | Research findings from PRD research phase (codebase analysis, external docs) |
+| `tasks/prd-*.md` | Generated PRD markdown files |
 | `.claude-plugin/` | Plugin manifest for Claude Code marketplace discovery |
 | `flowchart/` | Interactive visualization of how Ralph works |
 
@@ -344,7 +355,7 @@ Ralph only works if there are feedback loops:
 
 ### Browser Verification for UI Stories
 
-Frontend stories must include "Verify in browser using dev-browser skill" in acceptance criteria. Ralph will use the dev-browser skill to navigate to the page, interact with the UI, and confirm changes work.
+Frontend stories must include "Verify in browser using Chrome DevTools MCP" in acceptance criteria. Ralph will use the [Chrome DevTools MCP](https://github.com/anthropics/anthropic-quickstarts/tree/main/mcp-servers/chrome-devtools-mcp) to navigate to the page, interact with the UI, and confirm changes work.
 
 ### Stop Condition
 
@@ -381,3 +392,6 @@ Ralph automatically archives previous runs when you start a new feature (differe
 - [Geoffrey Huntley's Ralph article](https://ghuntley.com/ralph/)
 - [Amp documentation](https://ampcode.com/manual)
 - [Claude Code documentation](https://docs.anthropic.com/en/docs/claude-code)
+- [OpenAI Codex CLI](https://github.com/openai/codex)
+- [Chrome DevTools MCP](https://github.com/anthropics/anthropic-quickstarts/tree/main/mcp-servers/chrome-devtools-mcp) - Browser automation for UI verification
+- [Docker AI Sandboxes](https://docs.docker.com/ai/sandboxes/)

@@ -13,11 +13,223 @@ Create detailed Product Requirements Documents that are clear, actionable, and s
 ## The Job
 
 1. Receive a feature description from the user
-2. Ask 3-5 essential clarifying questions (with lettered options)
-3. Generate a structured PRD based on answers
-4. Save to `tasks/prd-[feature-name].md`
+2. **Ask if they want research first** (recommended for complex or unfamiliar codebases)
+3. If yes: Conduct research phase and save to `tasks/research-[feature-name].md`
+4. Ask 3-5 essential clarifying questions (informed by research if conducted)
+5. Generate a structured PRD based on answers
+6. Save to `tasks/prd-[feature-name].md`
 
 **Important:** Do NOT start implementing. Just create the PRD.
+
+---
+
+## Step 0: Research Decision
+
+After receiving the feature request, ask the user:
+
+```
+Before creating the PRD, would you like me to research the codebase and external sources first?
+
+This is recommended for:
+- Complex features in large codebases
+- Features in unfamiliar projects
+- Features that may interact with existing systems
+
+1. Would you like me to conduct research first?
+   A. Yes, do thorough research (recommended for complex features)
+   B. Yes, but keep it quick (for simpler features)
+   C. No, I already know the codebase well enough
+   D. No, let's just create the PRD directly
+
+2. If researching, any specific areas I should focus on?
+   A. Codebase only (no external research)
+   B. External docs and GitHub issues only
+   C. Both codebase and external sources (recommended)
+   D. Other: [please specify]
+```
+
+If user chooses research (A or B for question 1), proceed to the Research Phase.
+Otherwise, skip to Step 1: Clarifying Questions.
+
+---
+
+## Research Phase
+
+When research is requested, follow these steps:
+
+### Phase 1: Gather Initial Context
+
+Automatically read project context files:
+- `CLAUDE.md` / `AGENTS.md` (if they exist)
+- `README.md`
+- Any existing PRDs in `tasks/`
+- `progress.txt` (for learnings from previous work)
+
+### Phase 2: Get User Guidance
+
+Ask the user:
+
+```
+To focus my research, please help me understand:
+
+1. Where in the codebase should I start looking?
+   (e.g., "src/components/", "internal/api/", "the auth module")
+
+2. Are there existing features similar to this one I should study?
+   (e.g., "look at how filtering works", "check the user settings page")
+
+3. Any GitHub issues, docs, or external resources I should review?
+   (e.g., "issue #123", "the official k6 docs on extensions")
+
+4. What's the project's official documentation or community resources?
+   (e.g., "https://docs.example.com", "their Discord", "Stack Overflow tag")
+```
+
+### Phase 3: Codebase Deep Dive
+
+Using the guidance from Phase 2, conduct a thorough exploration:
+
+1. **Search for related code patterns**
+   - Find files matching the suggested areas
+   - Look for similar existing features
+   - Identify naming conventions and patterns
+
+2. **Understand the architecture**
+   - How is the codebase structured?
+   - What patterns are used for similar features?
+   - What testing approaches exist?
+
+3. **Map dependencies**
+   - What modules would this feature interact with?
+   - Are there shared utilities or components to reuse?
+   - What are the integration points?
+
+4. **Review tests**
+   - How are similar features tested?
+   - What test patterns should be followed?
+
+Use the Explore agent (Task tool with subagent_type=Explore) for thorough codebase investigation.
+
+### Phase 4: External Research
+
+If external research was requested, search for:
+
+1. **Official Documentation**
+   - Project docs relevant to the feature area
+   - API references
+   - Architecture guides
+
+2. **GitHub Issues**
+   - Related feature requests
+   - Previous discussions about similar functionality
+   - Known limitations or constraints
+
+3. **Community Resources**
+   - Forum discussions
+   - Stack Overflow questions
+   - Blog posts about the architecture
+
+Use WebSearch and WebFetch tools for external research. Focus on the specific project's resources rather than broad searches.
+
+### Phase 5: Save Research Findings
+
+Save all findings to `tasks/research-[feature-name].md` with this structure:
+
+```markdown
+# Research: [Feature Name]
+
+**Date:** [Date]
+**Feature:** [Brief description]
+
+## Executive Summary
+
+[2-3 sentences summarizing key findings and recommendations]
+
+## Codebase Analysis
+
+### Relevant Files & Modules
+- `path/to/file.ts` - [What it does, why it's relevant]
+- `path/to/module/` - [Module purpose]
+
+### Existing Patterns
+- [Pattern 1]: [How it's used, where to find examples]
+- [Pattern 2]: [Description]
+
+### Reusable Components
+- [Component/utility name]: [What it does, how to use it]
+
+### Testing Approach
+- [How similar features are tested]
+- [Test file locations]
+
+## External Research
+
+### Official Documentation
+- [Link]: [Key takeaways]
+
+### GitHub Issues
+- [#123](link): [Summary of discussion]
+- [#456](link): [Relevant context]
+
+### Community Insights
+- [Source]: [Key insight]
+
+## Technical Considerations
+
+### Constraints
+- [Constraint 1]
+- [Constraint 2]
+
+### Dependencies
+- [What this feature depends on]
+- [What might depend on this feature]
+
+### Risks
+- [Potential risk 1]
+- [Potential risk 2]
+
+## Recommendations
+
+### Suggested Approach
+[High-level recommendation for implementation]
+
+### Files to Modify
+- `path/to/file.ts` - [What changes needed]
+
+### Files to Create
+- `path/to/new/file.ts` - [Purpose]
+
+## Open Questions
+
+- [Question needing clarification]
+- [Another question]
+```
+
+### Phase 6: Present Summary to User
+
+After saving the research file, present a summary:
+
+```
+## Research Complete
+
+I've saved detailed findings to `tasks/research-[feature-name].md`.
+
+### Key Findings:
+- [Most important finding 1]
+- [Most important finding 2]
+- [Most important finding 3]
+
+### Recommended Approach:
+[Brief recommendation]
+
+### Potential Concerns:
+- [Concern 1]
+- [Concern 2]
+
+Does this align with your understanding? Any areas I should investigate further before we proceed to the PRD?
+```
+
+Wait for user confirmation before proceeding to clarifying questions.
 
 ---
 
@@ -29,6 +241,8 @@ Ask only critical questions where the initial prompt is ambiguous. Focus on:
 - **Core Functionality:** What are the key actions?
 - **Scope/Boundaries:** What should it NOT do?
 - **Success Criteria:** How do we know it's done?
+
+**If research was conducted:** Use the findings to ask more informed questions. Skip questions that were already answered by the research.
 
 ### Format Questions Like This:
 
@@ -63,6 +277,8 @@ Generate the PRD with these sections:
 ### 1. Introduction/Overview
 Brief description of the feature and the problem it solves.
 
+**If research was conducted:** Reference the research file and incorporate key findings.
+
 ### 2. Goals
 Specific, measurable objectives (bullet list).
 
@@ -95,6 +311,7 @@ Each story should be small enough to implement in one focused session.
   - `Both` - Full pipeline (backend dev → backend review → frontend dev → frontend review)
 - Acceptance criteria must be verifiable, not vague. "Works correctly" is bad. "Button shows confirmation dialog before deleting" is good.
 - **For any story with UI changes (Frontend or Both):** Always include "Verify in browser using Chrome DevTools MCP" as acceptance criteria.
+- **If research was conducted:** Use findings to identify which files to modify, patterns to follow, and components to reuse.
 
 ### 4. Functional Requirements
 Numbered list of specific functionalities:
@@ -111,10 +328,14 @@ What this feature will NOT include. Critical for managing scope.
 - Link to mockups if available
 - Relevant existing components to reuse
 
+**If research was conducted:** Reference reusable components and patterns discovered.
+
 ### 7. Technical Considerations (Optional)
 - Known constraints or dependencies
 - Integration points with existing systems
 - Performance requirements
+
+**If research was conducted:** Include constraints and dependencies discovered during research.
 
 ### 8. Success Metrics
 How will success be measured?
@@ -123,6 +344,14 @@ How will success be measured?
 
 ### 9. Open Questions
 Remaining questions or areas needing clarification.
+
+### 10. Research Reference (If conducted)
+If research was conducted, add:
+```markdown
+## Research Reference
+
+See `tasks/research-[feature-name].md` for detailed codebase analysis and external research findings.
+```
 
 ---
 
@@ -140,9 +369,10 @@ The PRD reader may be a junior developer or AI agent. Therefore:
 
 ## Output
 
+- **Research (if conducted):** `tasks/research-[feature-name].md`
+- **PRD:** `tasks/prd-[feature-name].md`
 - **Format:** Markdown (`.md`)
-- **Location:** `tasks/`
-- **Filename:** `prd-[feature-name].md` (kebab-case)
+- **Filename:** kebab-case
 
 ---
 
@@ -243,13 +473,96 @@ Add priority levels to tasks so users can focus on what matters most. Tasks can 
 
 ---
 
+## Example Research Output
+
+```markdown
+# Research: Task Priority System
+
+**Date:** 2026-02-05
+**Feature:** Add priority levels (high/medium/low) to tasks
+
+## Executive Summary
+
+The codebase uses a standard React + PostgreSQL stack. Task data is stored in `tasks` table with existing columns for status and due_date. The Badge component in `src/components/ui/` supports color variants and can be reused for priority indicators. Similar filtering exists for task status that can be adapted.
+
+## Codebase Analysis
+
+### Relevant Files & Modules
+- `src/db/schema/tasks.ts` - Task table definition, add priority column here
+- `src/components/TaskCard.tsx` - Display component, add priority badge
+- `src/components/ui/Badge.tsx` - Reusable badge with color variants
+- `src/components/TaskList.tsx` - List component with existing status filter
+
+### Existing Patterns
+- **Database columns**: Use Drizzle ORM with `text()` type and `.default()` for enums
+- **Filtering**: URL search params via `useSearchParams()` hook
+- **UI Components**: Shadcn/ui components with Tailwind variants
+
+### Reusable Components
+- `Badge`: Already supports `variant` prop with colors (destructive, warning, secondary)
+- `Select`: Dropdown component used for status filter
+
+### Testing Approach
+- Unit tests in `*.test.tsx` files alongside components
+- E2E tests in `tests/e2e/` using Playwright
+
+## External Research
+
+### Official Documentation
+- [Drizzle ORM Columns](https://orm.drizzle.team/docs/column-types): Use `text()` with check constraint for enum-like behavior
+
+### GitHub Issues
+- No existing issues for priority feature
+- #45: Related discussion about task sorting (closed, implemented)
+
+## Technical Considerations
+
+### Constraints
+- Must maintain backwards compatibility (existing tasks get 'medium' default)
+- Filter must work with existing status filter (AND logic)
+
+### Dependencies
+- Drizzle ORM for migration
+- Existing Badge and Select components
+
+### Risks
+- Performance: Adding filter may slow list queries (mitigate with index)
+
+## Recommendations
+
+### Suggested Approach
+1. Add column with migration (default 'medium')
+2. Update TaskCard to show badge
+3. Add filter using existing pattern from status filter
+4. Add to edit modal using existing Select component
+
+### Files to Modify
+- `src/db/schema/tasks.ts` - Add priority column
+- `src/components/TaskCard.tsx` - Add priority badge
+- `src/components/TaskList.tsx` - Add priority filter
+- `src/components/TaskEditModal.tsx` - Add priority selector
+
+### Files to Create
+- `src/db/migrations/0002_add_priority.ts` - Migration file
+
+## Open Questions
+
+- Should we add a database index on priority for filter performance?
+- Should priority be included in task search results?
+```
+
+---
+
 ## Checklist
 
 Before saving the PRD:
 
+- [ ] Asked if user wants research (for complex features)
+- [ ] If research requested: Conducted thorough investigation and saved to `tasks/research-[feature-name].md`
 - [ ] Asked clarifying questions with lettered options
-- [ ] Incorporated user's answers
+- [ ] Incorporated user's answers (and research findings if applicable)
 - [ ] User stories are small and specific
+- [ ] Each user story has a Layers field (Backend | Frontend | Both)
 - [ ] Functional requirements are numbered and unambiguous
 - [ ] Non-goals section defines clear boundaries
-- [ ] Saved to `tasks/prd-[feature-name].md`
+- [ ] Saved PRD to `tasks/prd-[feature-name].md`
